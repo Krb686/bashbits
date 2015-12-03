@@ -8,5 +8,5 @@
 # of that fd, which is then redirected as input to the loop (read command)
 
 while read -r LINE; do
-
-done < <("someCommand")
+  printf "LINE=$LINE\n"
+done < <(./random_command.sh)
