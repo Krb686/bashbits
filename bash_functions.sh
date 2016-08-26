@@ -42,19 +42,18 @@ function print_log {
     local R_OFF="${3:-0}"
 
     declare -A HEADERS=(["i"]="[ ------ info ----- ]: " ["d"]="[ ===== debug ===== ]: " ["e"]="[ ***** error ***** ]: ")
+    is_fd_valid "${PRINT_FD:--1}" && echo "PRINT_FD is valid!" || exec {PRINT_FD}>&1
 
-    is_fd_valid 3 || { printf "%s" "fd 3 is invalid!"; return 1; }
-
-    which tput >&/dev/null || printf "%s" "$STR" >&3
+    which tput >&/dev/null || printf "%s" "$STR" >&$PRINT_FD
 
     local WIDTH=$(($(tput cols)-$R_OFF))
     local HEADER="${HEADERS[$TYPE]}"
     STR="$HEADER""$STR"
 
     while [[ "${#STR}" -gt $WIDTH ]]; do
-        printf "%s\n" "${STR:0:$WIDTH}">&3
+        printf "%s\n" "${STR:0:$WIDTH}">&$PRINT_FD
         STR="$(printf ' %0.s' $(seq 1 ${#HEADER}))""${STR:$WIDTH+1:-1}"
     done
 
-    printf "%s\n" "$STR"
+    printf "%s\n" "$STR">&$PRINT_FD
 }
