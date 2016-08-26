@@ -16,7 +16,6 @@ EXIT_NO_BASH_FUNCS=1
 #Bash opts
 set -euo pipefail
 
-printf -v VAR $'\n'
 
 # Source bash functions
 . "bash_functions.sh" || exit $EXIT_NO_BASH_FUNCS
@@ -28,9 +27,10 @@ function exit {
     local CODE="${1:--1}"
     case "$CODE" in
         "$EXIT_NO_BASH_FUNCS")
-            print_error "Bash functions file not found!"
-            builtin exit "$EXIT_NO_BASH_FUNCS";;
+            print_log "e" "Bash functions file not found!";;
     esac
+
+    builtin exit "$CODE"
 }
 
 # ================ Function: main ================ #

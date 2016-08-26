@@ -26,16 +26,9 @@ function is_fd_valid {
     { >&$1; } 2>/dev/null
 }
 
-# ================ Function: print_error ================ #
-# Print error information                                 #
-# ======================================================= #
-function print_error {
-    [[ "${ERROR_FLAG:-0}" -ne 0 ]] && print_spaced "[ ***** ERROR ***** ]: $1" 23
-}
-
-# ================ Function: print_spaced ================ #
-# Print equispaced content                                 #
-# ======================================================== #
+# ================ Function: print_log ================ #
+# Print equispaced content                              #
+# ===================================================== #
 function print_log {
     local TYPE="${1:?'No logtype specified! Must be i(info), d(debug), or e(error)!'}"
     [[ ! "$TYPE" =~ (i|d|e) ]] && printf "%s\n" "No logtype specified! Must be i(info), d(debug), or e(error)!" && return 1
