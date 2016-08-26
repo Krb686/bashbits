@@ -34,6 +34,27 @@ function print_error {
 # ================ Function: print_spaced ================ #
 # Print equispaced content                                 #
 # ======================================================== #
-function print_spaced {
-    printf "%s\n" "$1"
+function print_log {
+    local TYPE="${1:?'No logtype specified! Must be i(info), d(debug), or e(error)!'}"
+    [[ ! "$TYPE" =~ (i|d|e) ]] && printf "%s\n" "No logtype specified! Must be i(info), d(debug), or e(error)!" && return 1
+
+    local STR="${2:?'No argument to print_log!'}"
+    local R_OFF="${3:-0}"
+
+    declare -A HEADERS=(["i"]="[ ------ info ----- ]: " ["d"]="[ ===== debug ===== ]: " ["e"]="[ ***** error ***** ]: ")
+
+    is_fd_valid 3 || { printf "%s" "fd 3 is invalid!"; return 1; }
+
+    which tput >&/dev/null || printf "%s" "$STR" >&3
+
+    local WIDTH=$(($(tput cols)-$R_OFF))
+    local HEADER="${HEADERS[$TYPE]}"
+    STR="$HEADER""$STR"
+
+    while [[ "${#STR}" -gt $WIDTH ]]; do
+        printf "%s\n" "${STR:0:$WIDTH}">&3
+        STR="$(printf ' %0.s' $(seq 1 ${#HEADER}))""${STR:$WIDTH+1:-1}"
+    done
+
+    printf "%s\n" "$STR"
 }
