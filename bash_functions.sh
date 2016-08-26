@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # ================ is_alpha ================ #
 # ========================================== #
 function is_alpha {
@@ -21,7 +22,8 @@ function is_alphanum {
 # ================ is_fd_valid ================ #
 # ============================================= #
 function is_fd_valid {
-    { >&"${1:?'No argument to is_fd_valid!'}"; } 2>/dev/null
+    is_num "${1:?'Invalid argument to is_fd_valid'}" || { printf "%s\n" "Arg to is_fd_valid is not a number!"; return 1; }
+    { >&$1; } 2>/dev/null
 }
 
 # ================ Function: print_error ================ #
@@ -42,18 +44,23 @@ function print_log {
     local R_OFF="${3:-0}"
 
     declare -A HEADERS=(["i"]="[ ------ info ----- ]: " ["d"]="[ ===== debug ===== ]: " ["e"]="[ ***** error ***** ]: ")
-    is_fd_valid "${PRINT_FD:--1}" && echo "PRINT_FD is valid!" || exec {PRINT_FD}>&1
+    local HEADER="${HEADERS[$TYPE]}"
+     STR="$HEADER""$STR"
 
-    which tput >&/dev/null || printf "%s" "$STR" >&$PRINT_FD
+    which tput >&/dev/null || { printf "%s\n" "$STR" >&$LOG_FD; return 0; }
 
     local WIDTH=$(($(tput cols)-$R_OFF))
-    local HEADER="${HEADERS[$TYPE]}"
-    STR="$HEADER""$STR"
 
     while [[ "${#STR}" -gt $WIDTH ]]; do
-        printf "%s\n" "${STR:0:$WIDTH}">&$PRINT_FD
+        printf "%s\n" "${STR:0:$WIDTH}">&$LOG_FD
         STR="$(printf ' %0.s' $(seq 1 ${#HEADER}))""${STR:$WIDTH+1:-1}"
     done
 
-    printf "%s\n" "$STR">&$PRINT_FD
+    printf "%s\n" "$STR">&$LOG_FD
 }
+
+# Common setup
+# Make sure 'LOG_FD" is not in use
+[[ -n ${LOG_FD+x} ]] && printf "%s\n" "DO NOT use variable 'LOG_FD', as your values will be overwritten! This variable is reserved!" && exit 1
+exec {LOG_FD}>&1
+
