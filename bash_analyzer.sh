@@ -15,6 +15,16 @@ STR=
 STRING=
 COMMENT=
 STR_ESCAPE="off"
+QUOTE_CHECK="off"
+
+QUOTE_LEVEL=-1
+QUOTE_TRACKER=()
+COM_TRACKER=()
+
+
+STATE_ARRAY=()
+STATE_LVL=0
+STATE_EXIT_CHECK="off"
 
 # Exit codes
 EXIT_NO_BASH_FUNCS=1
@@ -62,6 +72,38 @@ function parse_loop {
     while read -rN1 char; do
         #printf "%s" "${char}"
 
+        # If QUOTE_CHECK is on, need to check if truly entering a string, or an expansion
+        if [[ "$QUOTE_CHECK" == "on" ]]; then
+            case "$char" in
+                "\$")
+                    STATE_EXIT_CHECK="on"
+                    STATE_ARRAY[$STATE_LVL]+=":expansion"
+                    ;;
+                *)
+                    if [[ "$STATE_EXIT_CHECK" == "on" ]]; then
+                        # Remove element
+                        STATE_ARRAY=("${STATE_ARRAY[@]:0:$((${#STATE_ARRAY}-1))}")
+                        STATE_LVL=$(($STATE_LVL-1))
+                    else
+
+                    fi
+                    STATE_ARRAY[$STATE_LVL]+=":str_double"
+                    ;;
+            esac
+
+            if [[ "$char" != "\$" ]]; then
+                if [[ "$STATE" == "norm" ]]; then
+                    state="str_double"
+                else
+                    STATE_NEST_LEVEL=$(($STATE_NEST_LEVEL+1))
+                fi
+            else
+                state="expansion"
+            fi
+
+            QUOTE_CHECK="off"
+        fi
+
         # Always turn off after a single char
         if [[ "$STR_ESCAPE" == "trigger" ]]; then
             STR_ESCAPE="on"
@@ -69,9 +111,14 @@ function parse_loop {
             STR_ESCAPE="off"
         fi
 
+        v2="there"
+        v1="$(echo "$(echo "hey - "$(echo "$V2")"" | grep -Eo "e")")"
+
         case $char in
             "#")
                 [[ "$STATE" == "norm" ]] && { STATE="comment"; } #printf "Now inside comment at line: $LINENUM!\n"; };;
+                ;;
+            "\$")
                 ;;
             "\\")
                 if [[ "$STATE" == "str_double" ]] && [[ "$STR_ESCAPE" == "off" ]]; then
@@ -80,13 +127,21 @@ function parse_loop {
                 fi
                 ;;
             "\"")
+                if [[ "$STR_ESCAPE" == "off" ]]; then
+                    QUOTE_CHECK="on"
+                fi
+
                 if [[ "$STATE" == "norm" ]]; then
+                    :
                     #printf "%s\n" "Entering state - str_double - at lineno $LINENUM"
-                    STATE="str_double"
+                    # Enter str_double state if the next char is NOT a $
+                    #STATE="str_double"
                 elif [[ "$STATE" == "str_double" ]] && [[ "$STR_ESCAPE" == "off" ]]; then
                     STATE="norm"
                     [[ "$DUMP_STRINGS" -eq 1 ]] && printf "%s\n" "STRING = $STRING, at lineno $LINENUM"
                      STRING=
+                elif [[ "$STATE" == "expansion" ]]; then
+                    QUOTE_CHECK="on"
                 fi
                 ;;
             $'\n')
@@ -106,8 +161,14 @@ function parse_loop {
 
         
         [[ $BUILD_STR -eq 1 ]] && STR+="$char" || STR=
-        [[ "$STATE" == "comment" ]] && COMMENT+="$char"
+        [[ "$STATE" == "comment" ]] && STR_TRACKER[-1]+="$char"
         [[ "$STATE" == "str_double" ]] && STRING+="$char"
+
+        if [[ "${#QUOTE_TRACKER[@]}" -gt 0 ]]; then
+            for i in "${!QUOTE_TRACKER[@]}"; do
+                QUOTE_TRACKER[$i]+="$char"
+            done
+        fi
 
         case "$STR" in
             "#!/bin/bash")
@@ -118,7 +179,13 @@ function parse_loop {
         esac
 
     done <<< "$(<${1:?'No file!'})"
+
+
 #b
+}
+
+function remove_array_element {
+
 }
 
 main $*

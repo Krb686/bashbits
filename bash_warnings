@@ -3,3 +3,7 @@
 2) Variable not double-quoted in situation where it would be desired
 
 3) printf warnings when using single arg variable expansion
+
+4) Missing semicolons in {}
+
+5) Quoted regexes in bash > 3.2
