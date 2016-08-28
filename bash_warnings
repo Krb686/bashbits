@@ -1,0 +1,5 @@
+1) Forgot ';;' in case option
+
+2) Variable not double-quoted in situation where it would be desired
+
+3) printf warnings when using single arg variable expansion
