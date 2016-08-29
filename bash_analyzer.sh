@@ -17,14 +17,11 @@ COMMENT=
 STR_ESCAPE="off"
 QUOTE_CHECK="off"
 
-QUOTE_LEVEL=-1
-QUOTE_TRACKER=()
-COM_TRACKER=()
-
-
 STATE_ARRAY=()
-STATE_LVL=0
+STATE_LVL=-1
 STATE_EXIT_CHECK="off"
+QUOTE_TRACKER=()
+
 
 # Exit codes
 EXIT_NO_BASH_FUNCS=1
@@ -76,8 +73,10 @@ function parse_loop {
         if [[ "$QUOTE_CHECK" == "on" ]]; then
             case "$char" in
                 "\$")
+                    STATE_LVL=$(($STATE_LVL++))
                     STATE_EXIT_CHECK="on"
-                    STATE_ARRAY[$STATE_LVL]+=":expansion"
+                    STATE_ARRAY[$STATE_LVL]="expansion"
+                    QUOTE_TRACKER[$STATE_LVL]=""
                     ;;
                 *)
                     if [[ "$STATE_EXIT_CHECK" == "on" ]]; then
@@ -85,21 +84,13 @@ function parse_loop {
                         STATE_ARRAY=("${STATE_ARRAY[@]:0:$((${#STATE_ARRAY}-1))}")
                         STATE_LVL=$(($STATE_LVL-1))
                     else
-
+                        STATE_LVL=$(($STATE_LVL++))
+                        STATE_EXIT_CHECK="on"
+                        STATE_ARRAY[$STATE_LVL]="str_double"
+                        QUOTE_TRACKER[$STATE_LVL]=""
                     fi
-                    STATE_ARRAY[$STATE_LVL]+=":str_double"
                     ;;
             esac
-
-            if [[ "$char" != "\$" ]]; then
-                if [[ "$STATE" == "norm" ]]; then
-                    state="str_double"
-                else
-                    STATE_NEST_LEVEL=$(($STATE_NEST_LEVEL+1))
-                fi
-            else
-                state="expansion"
-            fi
 
             QUOTE_CHECK="off"
         fi
@@ -113,6 +104,8 @@ function parse_loop {
 
         v2="there"
         v1="$(echo "$(echo "hey - "$(echo "$V2")"" | grep -Eo "e")")"
+
+        v3="$()"$HELLO
 
         case $char in
             "#")
@@ -128,19 +121,6 @@ function parse_loop {
                 ;;
             "\"")
                 if [[ "$STR_ESCAPE" == "off" ]]; then
-                    QUOTE_CHECK="on"
-                fi
-
-                if [[ "$STATE" == "norm" ]]; then
-                    :
-                    #printf "%s\n" "Entering state - str_double - at lineno $LINENUM"
-                    # Enter str_double state if the next char is NOT a $
-                    #STATE="str_double"
-                elif [[ "$STATE" == "str_double" ]] && [[ "$STR_ESCAPE" == "off" ]]; then
-                    STATE="norm"
-                    [[ "$DUMP_STRINGS" -eq 1 ]] && printf "%s\n" "STRING = $STRING, at lineno $LINENUM"
-                     STRING=
-                elif [[ "$STATE" == "expansion" ]]; then
                     QUOTE_CHECK="on"
                 fi
                 ;;

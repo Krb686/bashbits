@@ -18,22 +18,19 @@ VAL="$(somefunc)"
 
 echo "VAL = $VAL"
 
-function remove_arr_element {
-    ARR_NAME="$1"
-    IND="$2"
-
-    "$ARR_NAME"=("${ARR_NAME[@]:0:$((${#ARR_NAME[@]}-1))}")
-
-}
 
 ARR=("a" "b" "c" "d" "e")
 
 for i in {0..3}; do
 
-    printf "%s\n" "Before, len = ${#ARR[@]}"
-    remove_arr_element "ARR" "-1"
-    printf "%s\n" "After, len = ${#ARR[@]}"
-
+    #printf "%s\n" "Before, len = ${#ARR[@]}"
+    #remove_arr_element "ARR" "-1"
+    #printf "%s\n" "After, len = ${#ARR[@]}"
+:
 done
 
+v2="there"
+v1="$(echo "$(echo "hey - "$(echo "$V2")"" | grep -Eo "e")")"
+
+echo "$v1"
 
