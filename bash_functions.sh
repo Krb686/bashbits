@@ -101,6 +101,21 @@ function replace_spaces {
     printf "%s\n" "Renamed $fC files!"
 }
 
+# ================ Function: exec_locked ================ #
+# ======================================================= #
+function exec_locked {
+    local FUNC="${1:?"No func to 'exec_locked'!"}"
+    local LOCKFILE="$(realpath $0).lock"
+
+    [[ ! -f "$LOCKFILE" ]] && touch "$LOCKFILE"
+
+    exec {LOCK_FD}>"$LOCKFILE"
+
+    flock -x "$LOCK_FD"
+    "$FUNC"
+    flock -u "$LOCK_FD"
+}
+
 
 # Common setup
 # Make sure 'LOG_FD' is not in use
