@@ -33,6 +33,18 @@ set -euo pipefail
 # Source bash functions
 . "bash_functions.sh" || exit $EXIT_NO_BASH_FUNCS
 
+
+# ================ Function: main ================ #
+# Main entrypoint                                  #
+# ================================================ #
+function main {
+    trap exit EXIT
+
+    local file="${1:?'Need to specify file!'}"
+
+    parse_loop "$1"
+}
+
 # ================ Function: exit ======================== #
 # Handle exit cases                                        #
 # ======================================================== #
@@ -46,16 +58,7 @@ function exit {
     builtin exit "$CODE"
 }
 
-# ================ Function: main ================ #
-# Main entrypoint                                  #
-# ================================================ #
-function main {
-    trap exit EXIT
 
-    local file="${1:?'Need to specify file!'}"
-
-    parse_loop "$1"
-}
 
 # ================ Function: parse_loop ================ #
 # Parsing loop                                           #
@@ -102,10 +105,25 @@ function parse_loop {
             STR_ESCAPE="off"
         fi
 
-        v2="there"
-        v1="$(echo "$(echo "hey - "$(echo "$V2")"" | grep -Eo "e")")"
+        # Expansions within strings
+	#	Look for placement of 2 double quotes ""
+	#	If before expansion, then concatenation
+	#	If after expansion, then nesting
 
-        v3="$()"$HELLO
+        # If quote level = -1					up level
+        # If leading sig char = (				up level
+        # If leading sig char is ", then find next double quote in same sub level. If another double quote follows w/o level decrement, then nesting.
+        # If decrement before finding quote at entry level, then it is concatenation
+
+        # So basically, 0 quote = concatenation 
+        # 		1 quote = 
+        # 		2 quote = substitution
+
+#			echo "   hi"$(v1)$(v2)$(var)" $()   "		# Not true
+        #v2="there"
+        #v1="$(echo "$(echo "hey - "$(echo "$V2")"" | grep -Eo "e")")"
+
+        #v3="$()"$HELLO
 
         case $char in
             "#")
@@ -164,7 +182,18 @@ function parse_loop {
 #b
 }
 
-function remove_array_element {
+function push_state {
+    local ADD="${1:?"No state to 'push_state'!"}"
+    STATE_LEVEL=$(($STATE_LEVEL+1))
+    STATE_ARRAY[$STATE_LEVEL]="$ADD"
+}
+
+function pop_state {
+    delete_element_by_key "STATE_ARRAY" "$STATE_LEVEL"
+    STATE_LEVEL=$(($STATE_LEVEL-1))
+}
+
+function delete_element_by_key {
 
 }
 
