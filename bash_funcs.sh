@@ -1,18 +1,37 @@
 #!/bin/bash
 
-# TODO - list_package_contents
-# TODO - colorize
-
-[[ ${BASH_VERSINFO[0]}${BASH_VERSINFO[1]} < "43" ]] && { printf "%s\n" "Bash 4.3 or higher is required"; return 1; }
+# bash
+# ldap
+# snmp
+# ucarp
+# java
+# git
+# nfs
+# - network
+# - disk
+# - memory
+# - process
 
 # ================ Function: array_contains_key ================ #
+# Description:                                                   #
+#     Check if an array contains a key.                          #
+# Usage:                                                         #
+#     array_contains_key <array> <key>                           #
+# Return Codes:                                                  #
+#     0 if array <array> contains key <key>                      #
+#     1 if array <array> does not contain key <key>              #
+#     2 if <array> is set, but not an array.                     #
+#     3 if <array> is unset.                                     #
+# +Tested                                                        #
 # ============================================================== #
 function array_contains_key {
     local arr="${1:?"No arr to 'array_contains_key'!"}"
     local key="${2:?"No key to 'array_contains_key'!"}"
 
-    local tmp="\"\${!$arr[@]}\""
-    local keys="$(eval "echo $tmp")"
+    is_var_set "$arr" || return 3
+    is_array "$arr" || return 2
+
+    local keys="$(get_array_keys "$arr")"   
 
     for el in $keys; do
         [[ "$el" == "$key" ]] && return 0
@@ -21,10 +40,22 @@ function array_contains_key {
 }
 
 # ================ Function: array_contains_value ================ #
+# Description:                                                     #
+#     Check if an array contains a value.                          #
+# Usage:                                                           #
+#     array_contains_value <array> <value>                         #
+# Return Codes:                                                    #
+#     0 if array <array> contains value <value>                    #
+#     1 if array does not contain value.                           #
+#     2 if <array> is set, but not an array.                       #
+#     3 if <array> is unset.                                       #
 # ================================================================ #
 function array_contains_value {
     local arr="${1:?""}"
     local val="${2:?""}"
+
+    is_var_set "$arr" || return 3
+    is_array "$arr" || return 2
 
     local tmp="$arr[@]"
     local vals="${!tmp}"
@@ -33,6 +64,17 @@ function array_contains_value {
         [[ "$el" == "$val" ]] && return 0
     done
     return 1
+}
+
+# ================ Function: bash_requires ================ #
+# ========================================================= #
+function bash_requires {
+    local vers="${1:?""}"
+
+}
+
+function colorize {
+:
 }
 
 # ================ Function: delete_element_by_key ================ #
@@ -51,6 +93,32 @@ function delete_element_by_key {
 # ==================================================================== #
 function delete_elements_by_value {
 :
+}
+
+
+# ================ Function: get_array_keys ================ #
+# Usage: get_array_keys <array>                              #
+# Return Codes:                                              #
+#     0 if                                                   #
+#     1 if                                                   #
+# ========================================================== #
+function get_array_keys {
+    local arr="${1:?"No array to 'get_array_keys'!"}"
+
+    is_array "$arr" || exit 1
+    local tmp="\"\${!$arr[@]}\""
+    printf "%s" "$(eval "echo $tmp")"
+}
+
+
+# ================ Function: get_array_values ================ #
+# ============================================================ #
+function get_array_values {
+    local arr="${1:?""}"
+
+    is_array "$arr" || exit 1
+    local tmp="$arr[@]"
+    printf "%s" "${!tmp}"
 }
 
 # ================ is_alpha ================ #
@@ -115,11 +183,19 @@ function is_alphanum {
     [[ "${1:?'Usage: is_alphanum <string>'}" =~ ^[0-9a-zA-Z]+$ ]]
 }
 
+function is_fd_term {
+:
+}
+
 # ================ is_fd_valid ================ #
 # ============================================= #
 function is_fd_valid {
     is_num "${1:?'Usage: is_fd_valid <string>'}" || { printf "%s\n" "Arg to is_fd_valid is not a number!"; return 1; }
     { >&$1; } 2>/dev/null
+}
+
+function is_package_installed {
+:
 }
 
 # ================ Function: is_var_set ================ #
@@ -131,6 +207,10 @@ function is_fd_valid {
 function is_var_set {
     local var="${1:?"No var to 'is_var_set'!"}"
     [[ -v "$var" ]] && return 0 || return 1
+}
+
+function list_package_contents {
+:
 }
 
 # ================ print_debug ================ #
@@ -177,6 +257,20 @@ function print_log {
     printf "%s\n" "$STR">&$LOG_FD
 }
 
+# ================ Function: remove_array_duplicates ================ #
+# Remove duplicate values from an array                               #
+# Usage: remove_array_duplicates <array>                              #
+# =================================================================== #
+function remove_array_duplicates {
+    local arr="${1:?"No array to 'remove_array_duplicates'!"}"
+
+    local -a tmparray
+
+    for el in "$(get_array_values "$arr")"; do
+        echo "el = $el"
+    done
+}
+
 # ================ Function: replace_spaces ================ #
 # ========================================================== #
 function replace_spaces {
@@ -190,18 +284,26 @@ function replace_spaces {
 }
 
 # ================ Function: exec_locked ================ #
+# Execute a function in locked state, forcing             #
+# multiple calls to execute in serial                     #
+# Usage: exec_locked <func>                               #
+# Return Codes:                                           #
 # ======================================================= #
 function exec_locked {
-    local FUNC="${1:?"No func to 'exec_locked'!"}"
-    local LOCKFILE="$(realpath $0).lock"
+    local func="${1:?"No func to 'exec_locked'!"}"
+    local lockfile="$(realpath $0).lock"
 
-    [[ ! -f "$LOCKFILE" ]] && touch "$LOCKFILE"
+    [[ ! -f "$lockfile" ]] && touch "$lockfile"
 
-    exec {LOCK_FD}>"$LOCKFILE"
+    exec {lock_fd}>"$lockfile"
 
-    flock -x "$LOCK_FD"
-    "$FUNC"
-    flock -u "$LOCK_FD"
+    flock -x "$lock_fd"
+    "$func"
+    flock -u "$lock_fd"
+}
+
+function update_repo {
+:
 }
 
 # ================ Function: var_contains_attr ================ #
@@ -209,16 +311,28 @@ function exec_locked {
 # Return Codes                                                  #
 #     0 if <var> contains <attr>                                #
 #     1 if <var> does not contain <attr>                        #
+#     2 if <var> is not set                                     #
 # ============================================================= #
 function var_contains_attr {
     local var="${1:?"No var to 'var_contains_attr'!"}"
     local attr="${2:?"No attr to 'var_contains_attr'!"}"
 
+    is_var_set "$var" || return 2
     local str="$(declare -p "$var")"
     str="${str#* }"
-    str="${str% *}"
+    str="${str%% *}"
 
-    [[ "$str" =~ .*"$attr".* ]] && return 0 || return 1
+    [[ "$str" =~ .*"$attr".* ]]
+}
+
+function wait_for_file {
+:
+}
+
+function show_caller {
+    if [[ $? -eq 1 ]]; then
+        echo "Failure at ${BASH_SOURCE[2]}, line ${BASH_LINENO[1]}"
+    fi
 }
 
 
@@ -227,3 +341,4 @@ function var_contains_attr {
 [[ -n ${LOG_FD+x} ]] && printf "%s\n" "DO NOT use variable 'LOG_FD', as your values will be overwritten! This variable is reserved!"
 exec {LOG_FD}>&1
 
+trap show_caller EXIT
