@@ -12,6 +12,13 @@
 # - memory
 # - process
 
+function add_array_element {
+    local arr="${1:?"No array to 'add_array_element'!"}"
+    local el="${2:?"No element to 'add_array_element'!"}"
+
+    eval "$arr+=(\""$el"\")"
+}
+
 # ================ Function: array_contains_key ================ #
 # Description:                                                   #
 #     Check if an array contains a key.                          #
@@ -33,6 +40,7 @@ function array_contains_key {
 
     local keys="$(get_array_keys "$arr")"   
 
+    local el
     for el in $keys; do
         [[ "$el" == "$key" ]] && return 0
     done
@@ -60,6 +68,7 @@ function array_contains_value {
     local tmp="$arr[@]"
     local vals="${!tmp}"
 
+    local el
     for el in $vals; do
         [[ "$el" == "$val" ]] && return 0
     done
@@ -117,14 +126,61 @@ function get_array_values {
     local arr="${1:?""}"
 
     is_array "$arr" || exit 1
+
     local tmp="$arr[@]"
-    printf "%s" "${!tmp}"
+
+    local el
+    for el in "${!tmp}"; do
+        printf "%s\n" "$el"
+    done
+}
+
+
+# ================ Function: get_package_deps ================ #
+# ============================================================ #
+function get_package_deps {
+    local package="${1:?"No package to 'get_package_dependencies'!"}"
+    printf "%s" "$(repoquery --requires --resolve "$package")"
+}
+
+
+# ================ Function: get_all_package_deps ================ #
+# ================================================================ #
+function get_all_package_deps {
+    local package="${1:?"No package to 'get_package_dependencies'!"}"
+
+    local -a final_deps
+    local -a tmp_array
+    readarray -t final_deps <<< "$(get_package_deps "$package")"
+    local index=0
+    while true; do
+
+        lstop="$((${#final_deps[@]}-1))"
+        [[ $lstop -eq $index ]] && break
+
+        for ((i=$index; i<=$lstop; i++)); do
+            package="${final_deps[$i]}"
+            readarray -t tmp_array <<< "$(get_package_deps "$package")"
+            join_arrays "final_deps" "tmp_array"
+            index=$(($index+1))
+        done
+
+        remove_array_duplicates "final_deps"
+
+        echo "len = "${#final_deps[@]}""
+    done
 }
 
 # ================ is_alpha ================ #
 # ========================================== #
 function is_alpha {
     [[ "${1:?'Usage: is_alpha <string>'}" =~ ^[a-zA-Z]+$ ]]
+}
+
+# ================ is_alphanum ================ #
+# ============================================= #
+function is_alphanum {
+    [[ "${1:?'Usage: is_alphanum <string>'}" =~ ^[0-9a-zA-Z]+$ ]]
 }
 
 # ================ Function: is_array ================ #
@@ -177,11 +233,7 @@ function is_num {
     [[ "${1:?'Usage: is_num <string>'}" =~ ^[0-9]*.?[0-9]+$ ]]
 }
 
-# ================ is_alphanum ================ #
-# ============================================= #
-function is_alphanum {
-    [[ "${1:?'Usage: is_alphanum <string>'}" =~ ^[0-9a-zA-Z]+$ ]]
-}
+
 
 function is_fd_term {
 :
@@ -209,8 +261,35 @@ function is_var_set {
     [[ -v "$var" ]] && return 0 || return 1
 }
 
+# ================ Function: join_arrays ================ #
+# Usage: join_arrays <array1> <array2>                    #
+# ======================================================= #
+function join_arrays {
+    local arr1="${1:?"No array1 to 'join_arrays'!"}"
+    local arr2="${2:?"No array2 to 'join_arrays'!"}"
+
+    is_array "$arr1" || return 3
+    is_array "$arr2" || return 2
+
+    set -x
+    while read -r el; do
+        add_array_element "$arr1" "$el"
+    done <<< "$(get_array_values "$arr2")"
+    set +x
+}
+
 function list_package_contents {
 :
+}
+
+function print_array_elements {
+    local arr="${1:?""}"
+
+    is_array "$arr" || exit 1
+
+    while read -r el; do
+        printf "%s\n" "$el"
+    done <<< "$(get_array_values "$arr")"
 }
 
 # ================ print_debug ================ #
@@ -265,10 +344,13 @@ function remove_array_duplicates {
     local arr="${1:?"No array to 'remove_array_duplicates'!"}"
 
     local -a tmparray
+    local el
 
-    for el in "$(get_array_values "$arr")"; do
-        echo "el = $el"
-    done
+    while read -r el; do
+        array_contains_value "tmparray" "$el" || add_array_element "tmparray" "$el"
+    done <<< "$(get_array_values "$arr")"
+
+    eval "$arr=(\"\${tmparray[@]}\")"
 }
 
 # ================ Function: replace_spaces ================ #
