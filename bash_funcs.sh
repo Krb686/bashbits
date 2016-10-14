@@ -156,19 +156,21 @@ function get_all_package_deps {
     while true; do
 
         lstop="$((${#final_deps[@]}-1))"
-        [[ $lstop -eq $index ]] && break
+        [[ $lstop -le $index ]] && break
 
         for ((i=$index; i<=$lstop; i++)); do
             package="${final_deps[$i]}"
+
             readarray -t tmp_array <<< "$(get_package_deps "$package")"
-            join_arrays "final_deps" "tmp_array"
+            [[ ${tmp_array[@]} != "" ]] && join_arrays "final_deps" "tmp_array"
             index=$(($index+1))
         done
 
         remove_array_duplicates "final_deps"
 
-        echo "len = "${#final_deps[@]}""
     done
+
+    print_array_elements "final_deps"
 }
 
 # ================ is_alpha ================ #
@@ -271,11 +273,10 @@ function join_arrays {
     is_array "$arr1" || return 3
     is_array "$arr2" || return 2
 
-    set -x
+
     while read -r el; do
         add_array_element "$arr1" "$el"
     done <<< "$(get_array_values "$arr2")"
-    set +x
 }
 
 function list_package_contents {
