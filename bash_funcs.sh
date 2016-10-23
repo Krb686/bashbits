@@ -25,29 +25,7 @@
 # - process
 
 
-# ================ Function: array.pop ======================================= #
-# Description:                                                                 #
-# Usage:                                                                       #       
-# Return Codes:                                                                #
-# Order:
-# ============================================================================ #
-function array.pop {
-:
-}
 
-
-# ================ Function: array.push ====================================== #
-# Description:                                                                 #
-# Usage:                                                                       #
-# Return Codes: 
-# Order:
-# ============================================================================ #
-function array.push {
-    local arr="${1:?"No array to 'add_array_element'!"}"
-    local el="${2:?"No element to 'add_array_element'!"}"
-
-    eval "$arr+=(\""$el"\")"
-}
 
 # ================ Function: array.contains_key ============================== #
 # Description:                                                                 #
@@ -62,13 +40,13 @@ function array.push {
 # Order:
 # ============================================================================ #
 function array.contains_key {
-    local arr="${1:?"No arr to 'array_contains_key'!"}"
+    local aname="${1:?"No arr to 'array_contains_key'!"}"
     local key="${2:?"No key to 'array_contains_key'!"}"
 
-    bash.is_var_set "$arr" || return 3
-    array.is_array "$arr" || return 2
+    bash.is_var_set "$aname" || return 3
+    array.is_array "$aname" || return 2
 
-    local keys="$(array.get_keys "$arr")"   
+    local keys="$(array.get_keys "$aname")"   
 
     local el
     for el in $keys; do
@@ -90,14 +68,14 @@ function array.contains_key {
 # Order:
 # ============================================================================ #
 function array.contains_value {
-    local arr="${1:?""}"
+    local aname="${1:?""}"
     local val="${2:?""}"
 
-    bash.is_var_set "$arr" || return 3
-    array.is_array "$arr" || return 2
+    bash.is_var_set "$aname" || return 3
+    array.is_array "$aname" || return 2
 
-    local tmp="$arr[@]"
-    local vals="${!tmp}"
+    local tmp="$aname[@]"
+    local vals="$(array.get_values "$aname")"
 
     local el
     for el in $vals; do
@@ -107,19 +85,19 @@ function array.contains_value {
 }
 
 # ================ Function: array.delete_by_key ============================= #
-# Description: 
-# Usage: 
-# Return Codes:
-# Order:
+# Description:                                                                 #
+# Usage:                                                                       #
+# Return Codes:                                                                #
+# Order:                                                                       #
 # ============================================================================ #
 function array.delete_by_key {
-    local arr="${1:?""}"
+    local aname="${1:?""}"
     local key="${2:?""}"
 
-    array.is_array "$arr" || return 1
+    array.is_array "$aname" || return 1
 
-    unset "$arr[$key]"
-    eval "$arr=(\"\${$arr[@]}\")"
+    unset "$aname[$key]"
+    eval "$aname=(\"\${$aname[@]}\")"
 }
 
 # ================ Function: array.delete_by_value =========================== #
@@ -129,7 +107,10 @@ function array.delete_by_key {
 # Order:
 # ============================================================================ #
 function array.delete_by_value {
-:
+    local aname="${1:?""}"
+    local val="${2:?""}"
+
+    array.is_array "$aname" || return 2
 }
 
 # ================ Function: array.dump_keys ================================= #
@@ -149,13 +130,13 @@ function array.dump_keys {
 # Order:
 # ============================================================================ #
 function array.dump_values {
-    local arr="${1:?""}"
+    local aname="${1:?""}"
 
-    array.is_array "$arr" || exit 1
+    array.is_array "$aname" || exit 1
 
     while read -r el; do
         printf "%s\n" "$el"
-    done <<< "$(get_array_values "$arr")"
+    done <<< "$(array.get_values "$aname")"
 }
 
 # ================ Function: array.get_keys ================================== #
@@ -167,10 +148,10 @@ function array.dump_values {
 # Order:
 # ============================================================================ #
 function array.get_keys {
-    local arr="${1:?"No array to 'get_array_keys'!"}"
+    local aname="${1:?"No array to 'get_array_keys'!"}"
 
-    array.is_array "$arr" || exit 1
-    local tmp="\"\${!$arr[@]}\""
+    array.is_array "$aname" || exit 1
+    local tmp="\"\${!$aname[@]}\""
     printf "%s" "$(eval "echo $tmp")"
 }
 
@@ -182,11 +163,11 @@ function array.get_keys {
 # Order:
 # ============================================================================ #
 function array.get_values {
-    local arr="${1:?""}"
+    local aname="${1:?""}"
 
-    array.is_array "$arr" || exit 1
+    array.is_array "$aname" || exit 1
 
-    local tmp="$arr[@]"
+    local tmp="$aname[@]"
 
     local el
     for el in "${!tmp}"; do
@@ -221,8 +202,8 @@ function array.is_array {
 # Order:
 # ============================================================================ #
 function array.is_associative {
-    local arr="${1:?""}"
-    bash.var_contains_attr "$var" "A"  && return 0 || return 1
+    local aname="${1:?""}"
+    bash.var_contains_attr "$aname" "A"  && return 0 || return 1
 }
 
 # ================ Function: array.is_standard =============================== #
@@ -235,27 +216,87 @@ function array.is_associative {
 # Order:
 # ============================================================================ #
 function array.is_standard {
-    local arr="${1:?""}"    
-    bash.var_contains_attr "$var" "a" && return 0 || return 1
+    local aname="${1:?""}"    
+    bash.var_contains_attr "$aname" "a" && return 0 || return 1
 }
 
 # ================ Function: array.join ====================================== #
-# Description:
-# Usage: join_arrays <array1> <array2>                                         #
-# Return Codes:
-# Order:
+# Description:                                                                 #
+#     Join elements from <array2> into <array1>                                #
+# Usage:                                                                       #
+#     array.join <array1> <array2>                                             #
+# Return Codes:                                                                #
+#     3 if <aname1> is not an array.                                           #
+#     2 if <
+# Order:                                                                       #
 # ============================================================================ #
 function array.join {
-    local arr1="${1:?"No array1 to 'join_arrays'!"}"
-    local arr2="${2:?"No array2 to 'join_arrays'!"}"
+    local aname1="${1:?"No array1 to 'join_arrays'!"}"
+    local aname2="${2:?"No array2 to 'join_arrays'!"}"
 
-    array.is_array "$arr1" || return 3
-    array.is_array "$arr2" || return 2
-
+    array.is_array "$aname1" || return 3
+    array.is_array "$aname2" || return 2
 
     while read -r el; do
-        array.push "$arr1" "$el"
-    done <<< "$(get_array_values "$arr2")"
+        array.push "$aname1" "$el"
+    done <<< "$(array.get_values "$aname2")"
+}
+
+# ================ Function: array.len ======================================= #
+# Description:                                                                 #
+# Usage:                                                                       #
+# Return Codes:                                                                #
+# Order:                                                                       #
+# ============================================================================ #
+function array.len {
+    local aname="${1:?""}"
+    declare -p "$aname"
+    array.is_array "$aname" || return 1
+
+    local str="\"\${#$aname[@]}\""
+    eval "echo $str"
+}
+
+
+# ================ Function: array.pop ======================================= #
+# Description:                                                                 #
+# Usage:                                                                       #       
+# Return Codes:                                                                #
+# Order:
+# ============================================================================ #
+function array.pop {
+    local aname="${1:?""}"
+    array.is_standard "$aname" || exit 2
+}
+
+
+# ================ Function: array.push ====================================== #
+# Description:                                                                 #
+#     Push <el> to end of array named <aname>.                                 #
+#     <el> can be a single element, or a newline separated list of elements.   #
+# Usage:                                                                       #
+#     array.push <aname> <el>                                                  #
+# Return Codes:                                                                #
+#     2 if <aname> is not an array.                                            #
+#     1 if <aname> is an associative array.                                    #
+#     0 if <el> was successfully pushed to array <aname>.                      #
+# Order:                                                                       #
+# ============================================================================ #
+function array.push {
+    local aname="${1:?"No array to 'add_array_element'!"}"
+    local el="${2:?"No element to 'add_array_element'!"}"
+
+    array.is_array "$aname" || return 2
+    array.is_standard "$aname" || return 1
+
+    string.contains "$el" $'\n'
+    if [[ $? -eq 0 ]]; then
+        local -a tmparray
+        readarray -t tmparray <<< "$el"
+        array.join "$aname" "tmparray"
+    else
+        eval "$aname+=(\""$el"\")"
+    fi
 }
 
 # ================ Function: array.remove_duplicates ========================= #
@@ -267,16 +308,16 @@ function array.join {
 # Order:
 # ============================================================================ #
 function array.remove_duplicates {
-    local arr="${1:?"No array to 'remove_array_duplicates'!"}"
+    local aname="${1:?"No array to 'remove_array_duplicates'!"}"
 
     local -a tmparray
     local el
 
     while read -r el; do
         array.contains_value "tmparray" "$el" || array.push "tmparray" "$el"
-    done <<< "$(get_array_values "$arr")"
+    done <<< "$(get_array_values "$aname")"
 
-    eval "$arr=(\"\${tmparray[@]}\")"
+    eval "$aname=(\"\${tmparray[@]}\")"
 }
 
 # ================ Function: array.split ===================================== #
@@ -333,6 +374,55 @@ function bash.var_contains_attr {
     str="${str%% *}"
 
     [[ "$str" =~ .*"$attr".* ]]
+}
+
+# ================ Function: c.get_include_paths ============================= #
+# ============================================================================ #
+function c.get_include_paths {
+    cpp -v </dev/null 2>&1 | sed -ne '/starts here/,/End of/p' | grep -v "search starts here" | grep -v "End of search list"
+}
+
+# ================ Function: c.get_includes ================================== #
+# Description:                                                                 #
+# Usage:                                                                       #
+# ============================================================================ #
+function c.get_includes {
+    local file="${1:?""}"
+    local -a array
+    readarray -t array <<<"$(cat "$file" | grep -Po '(?<=^#include (<|")).*(?=(>|")$)')"
+
+    for el in "${array[@]}"; do
+        printf "%s\n" "$el"
+    done
+}
+
+# ================ Function: c.get_all_includes ============================== #
+# Description:                                                                 #
+#     Find location of all necessary includes for a given c src.               #
+# Usage:                                                                       #
+#     c.get_all_includes <file>                                                #
+# ============================================================================ #
+function c.get_all_includes {
+    local file="${1:?"No file to 'c.get_all_includes'!"}"
+    local -a array
+    readarray -t array <<< "$(c.get_includes "$file")"
+
+
+    # 
+    local icur=0
+    local iend=${#array[@]}
+    until [[ $icur -eq $iend ]]; do
+    :    
+    done
+
+    local istart=0
+    local icur=0
+    local iend=0
+    #while [[ 
+    #for el in "${direct_includes[@]}"; do
+    
+    #    echo "el = $el"
+    #done
 }
 
 
