@@ -2,23 +2,36 @@
 
 . "/home/kevin/gitrepos/bashbits/bash_funcs.sh"
 
-PASS=0
-FAIL=0
+declare -a testfuncs
+testfuncs+=("array.contains_key.test")
+testfuncs+=("array.contains_value.test")
+testfuncs+=("array.push.test")
 
-SUCCESS==0
+declare -A testpasses
+declare -A testfailures
+declare -i total_passes=0
+declare -i total_failures=0
 
+INFO_FLAG=1
+DEBUG_FLAG=0
+ERROR_FLAG=1
+
+# ================ Function: pass ================ #
 function pass {
-    PASS=$(($PASS+1))
+    testpasses["$testfunc"]=$((${testpasses["$testfunc"]} + 1))
+    total_passes=$(($total_passes + 1))
 }
 
+# ================ Function: fail ================ #
 function fail {
-    FAIL=$(($FAIL+1))
-    echo "Fail at ${BASH_LINENO[1]}"
+    testfailures["$testfunc"]=$((${testfailures["$testfunc"]} + 1))
+    total_failures=$(($total_failures + 1))
+    print.error "    **** Fail at ${BASH_LINENO[1]}"
 }
 
 function test_report {
-    echo "Passes --> $PASS"
-    echo "Failures --> $FAIL"
+    echo "Total Passes --> $total_passes"
+    echo "Total Failures --> $total_failures"
 }
 
 function check_pass {
@@ -29,6 +42,30 @@ function check_fail {
     [[ $? -eq ${1:?"No check code!"} ]] && pass || fail
 }
 
+function execute_tests {
+    print.info "Executing tests"
+
+    for testfunc in "${testfuncs[@]}"; do
+        print.info "--> $testfunc"
+
+        # Initialize passes and failures for test function
+        testpasses["$testfunc"]=0
+        testfailures["$testfunc"]=0
+
+        # Run the test function
+        "$testfunc"
+
+        # Report passes and failures
+        print.info "    --> passes: ${testpasses["$testfunc"]}"
+        print.info "    --> failures: ${testfailures["$testfunc"]}"
+    done
+
+    # Generate summary report
+    test_report
+}
+
+# ============================================================================ #
+# ================ Test Functions ============================================ #
 
 function array.contains_key.test {
 
@@ -55,8 +92,28 @@ function array.contains_value.test {
     array.contains_value "array1" "val1";     check_pass
 }
 
+function array.push.test {
 
+    # Should be able to push individual elements, or a list of elements
 
-array.contains_key.test
-array.contains_value.test
-test_report
+    local -a array_std=()
+    local -A array_assoc=()
+    local i=1
+
+    local el_list=""
+    for i in {0..2}; do
+        el_list+="$i"$'\n'
+    done
+
+    array.push "arrayBogus" "single element";        check_fail 2
+    array.push "i" "single element";                 check_fail 2
+    array.push "array_assoc" "element";              check_fail 1
+    array.push "array_std" "element";                check_pass
+    array.contains_value "array_std" "element";      check_pass
+    array.push "array_std" "$el_list";               check_pass
+    array.contains_value "array_std" "0";            check_pass
+    array.contains_value "array_std" "1";            check_pass
+    array.contains_value "array_std" "2";            check_pass
+}
+
+execute_tests
