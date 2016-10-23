@@ -86,31 +86,53 @@ function array.contains_value {
 
 # ================ Function: array.delete_by_key ============================= #
 # Description:                                                                 #
+#     Delete element from array indexed by <key.                               #
 # Usage:                                                                       #
+#     array.delete_by_key <key>                                                #
 # Return Codes:                                                                #
+#     0 if element indexed by <key> is successfully deleted.                   #
+#     1 if element indexed by <key> did not exist in <aname>.                  #
 # Order:                                                                       #
 # ============================================================================ #
 function array.delete_by_key {
     local aname="${1:?""}"
     local key="${2:?""}"
 
-    array.is_array "$aname" || return 1
+    array.is_array "$aname" || return 3
+    array.contains_key "$aname" "$key" || return 2
 
-    unset "$aname[$key]"
+    # TODO - not being able to unset (readonly) should not stop this function from working.
+    unset "$aname[$key]" || return 1
     eval "$aname=(\"\${$aname[@]}\")"
 }
 
 # ================ Function: array.delete_by_value =========================== #
-# Description: 
-# Usage: 
-# Return Codes:
-# Order:
+# Description:                                                                 #
+#     Delete all elements from array that have value <value>.                  #
+# Usage:                                                                       #
+#     array.delete_by_value <value>                                            #
+# Return Codes:                                                                #
+#     0 if at least 1 element is deleted.                                      #
+#     1 if no elements with value <value> exist in the array.                  #
+#     2 if <aname> is not an array.                                            #
+# Order:                                                                       #
 # ============================================================================ #
 function array.delete_by_value {
     local aname="${1:?""}"
     local val="${2:?""}"
 
     array.is_array "$aname" || return 2
+
+    array.is_standard "$aname" && local -a tmparray
+    array.is_associative "$aname" && local -A tmparray 
+
+    local keys="$(array.get_keys "$aname")"
+
+    for key in $keys; do
+        #local val="${
+        #[[ "$el" != "$val" ]] && array.
+        :
+    done
 }
 
 # ================ Function: array.dump_keys ================================= #
