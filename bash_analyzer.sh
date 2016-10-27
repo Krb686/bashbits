@@ -5,6 +5,8 @@ LOG_FLAG=1
 ERROR_FLAG=1
 DEBUG_FLAG=1
 
+BASH_FUNCS="/home/kevin/gitrepos/bashbits/bash_funcs.sh"
+
 DUMP_COMMENTS=0
 DUMP_STRINGS=1
 # ------------
@@ -25,13 +27,38 @@ QUOTE_TRACKER=()
 
 # Exit codes
 EXIT_NO_BASH_FUNCS=1
+EXIT_BAD_ARGS=2
 
-#Bash opts
-set -euo pipefail
+# ================ Function: init ================ #
+# ================================================ #
+function init {
+    #Bash opts
+    set -euo pipefail
 
 
-# Source bash functions
-. "bash_functions.sh" || exit $EXIT_NO_BASH_FUNCS
+    # Source bash functions
+    . "$BASH_FUNCS" 2>/dev/null || exit $EXIT_NO_BASH_FUNCS
+
+    arg_handler "$@"
+}
+
+
+# ================ Function: arg_handler ================ #
+# ======================================================= #
+function arg_handler {
+    if [[ $# -eq 0 ]]; then
+        exit "$EXIT_BAD_ARGS"
+    else
+        case "$1" in
+            "--target="*)
+                TARGET="${1#*=}"
+                print.debug "TARGET = $TARGET";;
+            *)
+                exit "$EXIT_BAD_ARGS";;
+        esac
+    fi
+}
+
 
 
 # ================ Function: main ================ #
@@ -40,7 +67,6 @@ set -euo pipefail
 function main {
     trap exit EXIT
 
-    local file="${1:?'Need to specify file!'}"
 
     parse_loop "$1"
 }
@@ -52,7 +78,9 @@ function exit {
     local CODE="${1:--1}"
     case "$CODE" in
         "$EXIT_NO_BASH_FUNCS")
-            print_log "e" "Bash functions file not found!";;
+            printf "%s\n" "Bash functions file not found!";;
+        "$EXIT_BAD_ARGS")
+            print.error "Bad arguments!";;
     esac
 
     builtin exit "$CODE"
@@ -193,12 +221,7 @@ function pop_state {
     STATE_LEVEL=$(($STATE_LEVEL-1))
 }
 
-function delete_element_by_key {
-
-}
-
-main $*
-
+init "$@"
 
 
 
