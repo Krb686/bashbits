@@ -1,36 +1,52 @@
 #!/bin/bash
 
+. "bash_funcs.sh"
 
-. bash_functions.sh
+DEBUG_FLAG=1
 
+declare -a array1
 
-function somefunc {
-    print_log "i" "This is just a very long string that is ideally going to test the capability of the print_space function which is defined in the bash_functions file and should provide for some pretty printing" 1
-    
-    print_log "d" "This is just a very long string that is ideally going to test the capability of the print_space function which is defined in the bash_functions file and should provide for some pretty printing" 1
-    
-    print_log "e" "This is just a very long string that is ideally going to test the capability of the print_space function which is defined in the bash_functions file and should provide for some pretty printing" 1
+array1+=("")
+array1+=("")
 
-    echo "hi"
+function func1 {
+    local -a array
+    array+=("hi")
+    declare -p "array"
+
+    func2
+
+    declare -p "array"
 }
 
-VAL="$(somefunc)"
+function func2 {
+    declare -p "array"
+    local array="what"
+    declare -p "array"
+}
 
-echo "VAL = $VAL"
+#func1
+
+#for el in "${array1[@]}"; do
+#    echo "el = $el"
+#done
 
 
-ARR=("a" "b" "c" "d" "e")
+tree_node="Company>Hello>There"
 
-for i in {0..3}; do
+printf "%s" "$tree_node" | awk -F '>' '{ if(NF>1) {print $(NF-1)} else {print $1}}'
 
-    #printf "%s\n" "Before, len = ${#ARR[@]}"
-    #remove_arr_element "ARR" "-1"
-    #printf "%s\n" "After, len = ${#ARR[@]}"
-:
-done
+#tree.create "newTree"
+#tree.create "newTree"
 
-v2="there"
-v1="$(echo "$(echo "hey - "$(echo "$V2")"" | grep -Eo "e")")"
+#echo "$newTree"
 
-echo "$v1"
+#str="Joe:Johnson:25;what"
+#array=($(echo "$str" | sed 's/:\|;/ /g'))
+#for el in "${array[@]}"; do
+#    echo "el = $el"
+#done
+
+tree="ROOT:Company>HR>HR Head<Legal>Legal Head:Engineering<Engineering>Engineering Head>Sub1>Assistant<Sub2>Assistant<<<Corporate>Director"
+tree.add_node "$tree" "Company>Engineering>Developer"
 

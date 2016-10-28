@@ -686,6 +686,130 @@ function string.is_num {
     [[ "${1:?'Usage: is_num <string>'}" =~ ^[0-9]*.?[0-9]+$ ]]
 }
 
+# Tree variable
+# Cannot use ", :, <, >
+#
+# --> Company
+#     --> HR
+#         --> HR Head
+#     --> Legal
+#         --> Legal Head
+#         --> Engineering
+#     --> Engineering
+#         --> Engineering Head
+#             --> Sub1
+#                 --> Assistant
+#             --> Sub2
+#                 --> Assistant
+#     --> Corporate
+#         --> Director
+#
+# "ROOT:Company>HR>HR Head<Legal>Legal Head:Engineering<Engineering>Engineering Head>Sub1>Assistant<Sub2>Assistant<<<Corporate>Director"
+
+# adding node
+
+# Company>Engineering>Developer
+
+# --> split by '<'
+
+# HR>HR Head
+# Legal>Legal Head:Engineering
+# Engineering>Engineering Head>Sub1>Assistant
+# Sub2>Assistant
+# Corporate>Director
+
+# ================ Function: tree.add_node =================================== #
+# ============================================================================ #
+function tree.add_node {
+    local INFO_FLAG=1
+    local tree="${1:?"No tree to 'tree.add_node'!"}"
+    local node="${2:?"No node to 'tree.add_node'!"}"
+
+    local node_parent="$(printf "%s" "$node" | awk -F '>' '{print NR}')"
+
+    local pre=""
+    local post=""
+    local branch_found=false
+
+    local index=0
+    local node_array=($(printf "%s" "$node" | sed 's/>/ /g'))
+    if [[ ${#node_array[@]} -gt 1 ]]; then
+        local node_parent="${node_array[$((${#node_array[@]} - 2))]}"
+        print.debug "node_parent = $node_parent"
+    fi
+
+
+    local depth=0
+    local left=""
+    local str=""
+    while read -rN1 char; do
+        case "$char" in
+            "<")
+                echo "str = $str, depth = $depth"
+                depth=$(($depth-1))
+                left+="$str"
+                str="";;
+            ">")
+                if [[ "$str" == ${node_array[$index]} && $index -eq $depth ]]; then
+                    print.info "-----------------------> match found"
+                    index=$(($index+1))
+                fi
+                print.debug "str = $str"
+                print.debug "n[index] = ${node_array[$index]}"
+                print.debug "index = $index"
+                print.debug "depth = $depth"
+                print.debug "--------"
+                depth=$(($depth+1))
+                left+="$str"
+                str="";;
+            ":")
+                echo "str = $str, depth = $depth"
+                left+="$str"
+                str="";;
+            *)
+                str+="$char";;
+        esac
+    done <<< "$tree"
+
+
+    # make sure node doesnt already exist
+    # make sure parent node exists
+
+    pre+="$(printf "%s" "$tree" | awk -F ':' '{print $1}')"
+    post+="${tree#*:}"
+
+    #until $branch_found; do
+    #:    
+    #done
+
+    # Record leading portion
+    # Record trailing portion
+    # Insert between
+}
+
+# ================ Function: tree.create ===================================== #
+#                                                                              #
+# ============================================================================ #
+function tree.create {
+    local var="${1:?""}"
+
+    bash.is_var_set "$var" && return 1
+    eval "$var=\"ROOT:\""
+}
+
+
+# ================ Function: tree.delete_node ================================ #
+# ============================================================================ #
+function tree.delete_node {
+:
+}
+
+# ================ Function: tree.node_exists ================================ #
+# ============================================================================ #
+function tree.node_exists {
+    local tree="${1:?""}"
+    local node="${2:?""}"
+}
 
 # ================ Function: yum.get_package_deps ============================ #
 # Description:
