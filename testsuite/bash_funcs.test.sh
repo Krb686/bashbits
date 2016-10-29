@@ -78,7 +78,6 @@ function array.contains_key.test {
     declare -A array2=(["k2"]="v2")
     local i=0
 
-    echo "${array2[@]}"
 
     array.contains_key "array3" "k2"; check_fail 3
     array.contains_key "i" "k1";      check_fail 2
@@ -100,7 +99,19 @@ function array.contains_value.test {
 }
 
 function array.delete_by_key.test {
-:
+
+    local -a array1=("el1")
+    local -A array2=(["k1"]="el1")
+    local -ar array3=("el1")
+    local i=1
+
+    array.delete_by_key "arrayBogus" "k1";    check_fail 4 # Should return 4 if array param is not set.
+    array.delete_by_key "i" "k1";             check_fail 3 # Should return 3 if array param is not an array.
+    array.delete_by_key "array3" "k1";        check_fail 2 # Should return 2 if array param is readonly.
+    array.delete_by_key "array2" "k2";        check_fail 1 # Should return 1 if array did not contain specified key.
+    array.delete_by_key "array2" "k1";        check_pass
+    array.delete_by_key "array1" "0";         check_pass
+
 }
 
 function array.push.test {
