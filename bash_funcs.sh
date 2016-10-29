@@ -88,22 +88,24 @@ function array.contains_value {
 # Description:                                                                 #
 #     Delete element from array indexed by <key.                               #
 # Usage:                                                                       #
-#     array.delete_by_key <key>                                                #
+#     array.delete_by_key <array> <key>                                        #
 # Return Codes:                                                                #
 #     0 if element indexed by <key> is successfully deleted.                   #
 #     1 if element indexed by <key> did not exist in <aname>.                  #
+#     2 if <array> is set, but not an array.                                   #
+#     3 if <array> is unset.                                                   #
 # Order:                                                                       #
 # ============================================================================ #
 function array.delete_by_key {
-    local aname="${1:?""}"
-    local key="${2:?""}"
+    local array_name="${1:?"No array_name to 'array.delete_by_key'!"}"
+    local key="${2:?"No key to 'array.delete_by_key'!"}"
 
-    array.is_array "$aname" || return 3
-    array.contains_key "$aname" "$key" || return 2
+    array.is_array "$array_name" || return 3
+    array.contains_key "$array_name" "$key" || return 2
 
     # TODO - not being able to unset (readonly) should not stop this function from working.
-    unset "$aname[$key]" || return 1
-    eval "$aname=(\"\${$aname[@]}\")"
+    unset "$array_name[$key]" || return 1
+    eval "$array_name=(\"\${$array_name[@]}\")"
 }
 
 # ================ Function: array.delete_by_value =========================== #
@@ -362,6 +364,23 @@ function array.split {
 function bash.requires {
     local vers="${1:?""}"
 
+}
+
+# ================ Function: bash.is_var_ro ================================== #
+# Description:                                                                 #
+#     Determine if a variable is declared as read-only                         #
+# Usage:                                                                       #
+#     bash.is_var_ro <var>                                                     #
+# Return Codes:                                                                #
+#     0 if <var> is read-only                                                  #
+#     1 if <var> is not read-only.                                             #
+#     2 if <var> is unset.                                                     #
+# ============================================================================ #
+function bash.is_var_ro {
+    local var="${1:?"No var to 'bash.is_var_ro'!"}"
+
+    bash.is_var_set "$var" || return 2
+    bash.var_contains_attr "$var" "r"
 }
 
 # ================ Function: bash.is_var_set ================================= #
