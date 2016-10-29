@@ -92,19 +92,23 @@ function array.contains_value {
 # Return Codes:                                                                #
 #     0 if element indexed by <key> is successfully deleted.                   #
 #     1 if element indexed by <key> did not exist in <aname>.                  #
-#     2 if <array> is set, but not an array.                                   #
-#     3 if <array> is unset.                                                   #
+#     2 if element indexed by <key> cannot be deleted because <array> is       #
+#       readonly.                                                              #
+#     3 if <array> is set, but not an array.                                   #
+#     4 if <array> is unset.                                                   #
 # Order:                                                                       #
 # ============================================================================ #
 function array.delete_by_key {
     local array_name="${1:?"No array_name to 'array.delete_by_key'!"}"
     local key="${2:?"No key to 'array.delete_by_key'!"}"
 
+    bash.is_var_set "$array_name" || return 4
     array.is_array "$array_name" || return 3
-    array.contains_key "$array_name" "$key" || return 2
+    bash.is_var_ro "$array_name" && return 2
+    array.contains_key "$array_name" "$key" || return 1
 
     # TODO - not being able to unset (readonly) should not stop this function from working.
-    unset "$array_name[$key]" || return 1
+    unset "$array_name[$key]"
     eval "$array_name=(\"\${$array_name[@]}\")"
 }
 
