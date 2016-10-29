@@ -24,9 +24,11 @@ function pass {
 
 # ================ Function: fail ================ #
 function fail {
+    local tc=$1 # test code
+    local ec=$2 # expected code
     testfailures["$testfunc"]=$((${testfailures["$testfunc"]} + 1))
     total_failures=$(($total_failures + 1))
-    print.error "    **** Fail at ${BASH_LINENO[1]}"
+    print.error "    **** Fail at ${BASH_LINENO[1]}! Should have returned $ec, but returned $tc!!"
 }
 
 function test_report {
@@ -39,7 +41,8 @@ function check_pass {
 }
 
 function check_fail {
-    [[ $? -eq ${1:?"No check code!"} ]] && pass || fail
+    local tc=$?
+    [[ $tc -eq ${1:?"No check code!"} ]] && pass || fail $tc $1
 }
 
 function execute_tests {
@@ -70,8 +73,10 @@ function execute_tests {
 function array.contains_key.test {
 
     local -a array1=("v1")
-    local -A array2=(["k2"]="v2")
+    declare -A array2=(["k2"]="v2")
     local i=0
+
+    echo "${array2[@]}"
 
     array.contains_key "array3" "k2"; check_fail 3
     array.contains_key "i" "k1";      check_fail 2
@@ -104,6 +109,7 @@ function array.push.test {
     for i in {0..2}; do
         el_list+="$i"$'\n'
     done
+
 
     array.push "arrayBogus" "single element";        check_fail 2
     array.push "i" "single element";                 check_fail 2

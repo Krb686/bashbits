@@ -40,13 +40,13 @@
 # Order:
 # ============================================================================ #
 function array.contains_key {
-    local aname="${1:?"No arr to 'array_contains_key'!"}"
-    local key="${2:?"No key to 'array_contains_key'!"}"
+    local array_name="${1:?"No array_name to 'array.contains_key'!"}"
+    local key="${2:?"No key to 'array.contains_key'!"}"
 
-    bash.is_var_set "$aname" || return 3
-    array.is_array "$aname" || return 2
+    bash.is_var_set "$array_name" || return 3
+    array.is_array "$array_name" || return 2
 
-    local keys="$(array.get_keys "$aname")"   
+    local keys="$(array.get_keys "$array_name")"   
 
     local el
     for el in $keys; do
@@ -68,14 +68,14 @@ function array.contains_key {
 # Order:
 # ============================================================================ #
 function array.contains_value {
-    local aname="${1:?""}"
-    local val="${2:?""}"
+    local array_name="${1:?"No array_name to 'array.contains_value'!"}"
+    local val="${2:?"No value to 'array.contains_value'!"}"
 
-    bash.is_var_set "$aname" || return 3
-    array.is_array "$aname" || return 2
+    bash.is_var_set "$array_name" || return 3
+    array.is_array "$array_name" || return 2
 
-    local tmp="$aname[@]"
-    local vals="$(array.get_values "$aname")"
+    local tmp="$array_name[@]"
+    local vals="$(array.get_values "$array_name")"
 
     local el
     for el in $vals; do
@@ -834,7 +834,7 @@ function yum.get_all_package_deps {
 
     local -a final_deps
     local -a tmp_array
-    readarray -t final_deps <<< "$(get_package_deps "$package")"
+    readarray -t final_deps <<< "$(yum.get_package_deps "$package")"
     local index=0
     while true; do
 
@@ -844,7 +844,7 @@ function yum.get_all_package_deps {
         for ((i=$index; i<=$lstop; i++)); do
             package="${final_deps[$i]}"
 
-            readarray -t tmp_array <<< "$(get_package_deps "$package")"
+            readarray -t tmp_array <<< "$(yum.get_package_deps "$package")"
             [[ ${tmp_array[@]} != "" ]] && array.join "final_deps" "tmp_array"
             index=$(($index+1))
         done
@@ -853,7 +853,7 @@ function yum.get_all_package_deps {
 
     done
 
-    array.dump_elements "final_deps"
+    array.dump_values "final_deps"
 }
 
 # ================ Function: yum.is_package_installed ======================== #

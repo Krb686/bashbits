@@ -35,6 +35,8 @@ function init {
     #Bash opts
     set -euo pipefail
 
+    # Setup exit trap
+    trap exit EXIT
 
     # Source bash functions
     . "$BASH_FUNCS" 2>/dev/null || exit $EXIT_NO_BASH_FUNCS
@@ -50,13 +52,15 @@ function arg_handler {
         exit "$EXIT_BAD_ARGS"
     else
         case "$1" in
-            "--target="*)
-                TARGET="${1#*=}"
-                print.debug "TARGET = $TARGET";;
+            "--target")
+                TARGET="${2:?"No target specified!"}"
+		shift 2;;
             *)
                 exit "$EXIT_BAD_ARGS";;
         esac
     fi
+
+    main
 }
 
 
@@ -65,10 +69,7 @@ function arg_handler {
 # Main entrypoint                                  #
 # ================================================ #
 function main {
-    trap exit EXIT
-
-
-    parse_loop "$1"
+    parse_loop
 }
 
 # ================ Function: exit ======================== #
@@ -80,12 +81,18 @@ function exit {
         "$EXIT_NO_BASH_FUNCS")
             printf "%s\n" "Bash functions file not found!";;
         "$EXIT_BAD_ARGS")
-            print.error "Bad arguments!";;
+            print.error "Bad arguments!"
+	    print.usage;;
     esac
 
     builtin exit "$CODE"
 }
 
+# =============== Function: print.usage ================ #
+# ====================================================== #
+function print.usage {
+    printf "%s\n" "Usage: bash_analyzer.sh <--target> <script>"
+}
 
 
 # ================ Function: parse_loop ================ #
@@ -204,7 +211,7 @@ function parse_loop {
                 ;;
         esac
 
-    done <<< "$(<${1:?'No file!'})"
+    done <<< "$(<$TARGET)"
 
 
 #b
@@ -222,12 +229,3 @@ function pop_state {
 }
 
 init "$@"
-
-
-
-
-
-
-
-
-
