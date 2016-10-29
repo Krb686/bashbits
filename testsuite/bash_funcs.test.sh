@@ -5,7 +5,9 @@
 declare -a testfuncs
 testfuncs+=("array.contains_key.test")
 testfuncs+=("array.contains_value.test")
+testfuncs+=("array.delete_by_key.test")
 testfuncs+=("array.push.test")
+testfuncs+=("bash.is_var_ro.test")
 
 declare -A testpasses
 declare -A testfailures
@@ -97,6 +99,10 @@ function array.contains_value.test {
     array.contains_value "array1" "val1";     check_pass
 }
 
+function array.delete_by_key.test {
+:
+}
+
 function array.push.test {
 
     # Should be able to push individual elements, or a list of elements
@@ -120,6 +126,16 @@ function array.push.test {
     array.contains_value "array_std" "0";            check_pass
     array.contains_value "array_std" "1";            check_pass
     array.contains_value "array_std" "2";            check_pass
+}
+
+function bash.is_var_ro.test {
+
+    local var2="hello"
+    local -r var3="hello"
+
+    bash.is_var_ro "var1";    check_fail 2
+    bash.is_var_ro "var2";    check_fail 1
+    bash.is_var_ro "var3";    check_pass
 }
 
 execute_tests
