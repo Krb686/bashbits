@@ -26,7 +26,6 @@
 
 
 
-
 # ================ Function: array.contains_key ============================== #
 # Description:                                                                 #
 #     Check if an array contains a key.                                        #
@@ -107,7 +106,6 @@ function array.delete_by_key {
     bash.is_var_ro "$array_name" && return 2
     array.contains_key "$array_name" "$key" || return 1
 
-    # TODO - not being able to unset (readonly) should not stop this function from working.
     unset "$array_name[$key]"
     eval "$array_name=(\"\${$array_name[@]}\")"
 }
@@ -120,25 +118,34 @@ function array.delete_by_key {
 # Return Codes:                                                                #
 #     0 if at least 1 element is deleted.                                      #
 #     1 if no elements with value <value> exist in the array.                  #
-#     2 if <aname> is not an array.                                            #
+#     2 if <array> is readonly and no elements can be deleted.                 #
+#     3 if <array> is set, but not an array.                                   #
+#     4 if <array> is unset.                                                   #
 # Order:                                                                       #
 # ============================================================================ #
 function array.delete_by_value {
-    local aname="${1:?""}"
-    local val="${2:?""}"
+    local array_name="${1:?"No array_name to 'array.delete_by_value'!"}"
+    local val="${2:?"No value to 'array.delete_by_value'!"}"
 
-    array.is_array "$aname" || return 2
+    bash.is_var_set "$array_name" || return 4 
+    array.is_array "$array_name" || return 3
+    bash.is_var_ro "$array_name" && return 2
 
-    array.is_standard "$aname" && local -a tmparray
-    array.is_associative "$aname" && local -A tmparray 
+    array.is_standard "$array_name" && local -a tmparray
+    array.is_associative "$array_name" && local -A tmparray 
 
-    local keys="$(array.get_keys "$aname")"
+    local keys="$(array.get_keys "$array_name")"
 
-    for key in $keys; do
-        #local val="${
-        #[[ "$el" != "$val" ]] && array.
-        :
-    done
+    local val_found=0
+    while read -r key; do
+        local value="$(array.get_by_key "$array_name" "$key")"
+        if [[ "$value" == "$val" ]]; then
+            val_found=1
+        else
+            array.set_element "$array_name" "$key" "$value"
+        fi
+    done <<< "$keys"
+    [[ $val_found -eq 1 ]]
 }
 
 # ================ Function: array.dump_keys ================================= #
@@ -181,6 +188,19 @@ function array.get_keys {
     array.is_array "$aname" || exit 1
     local tmp="\"\${!$aname[@]}\""
     printf "%s" "$(eval "echo $tmp")"
+}
+
+# ================ Function: array.get_by_key ================================ #
+# Description:                                                                 #
+# Usage:                                                                       #
+# Return Codes:                                                                #
+# Order:                                                                       #
+# ============================================================================ #
+function array.get_by_key {
+    local array_name="${1:?""}"
+    local key="${2:?""}"
+    local tmp="$array_name[\"$key\"]"
+    printf "%s" "${!tmp}"
 }
 
 
@@ -346,6 +366,24 @@ function array.remove_duplicates {
     done <<< "$(get_array_values "$aname")"
 
     eval "$aname=(\"\${tmparray[@]}\")"
+}
+
+
+# ================ Function: array.set_element =============================== #
+# Description:                                                                 #
+#     Set element in an array, specifying key and value.                       #
+# Usage:                                                                       #
+#     array.add_element <array> <key> <value>                                  #
+# Return Codes:                                                                #
+#     0 if                                                                     #
+#     1 if                                                                     #
+# Order:                                                                       #
+# ============================================================================ #
+function array.add_element {
+    local array_name="${1:?""}"
+    local key="${2:?""}"
+    local value="${3:?""}"
+    eval "$array_name[\"$key\"]=\"$value\""
 }
 
 # ================ Function: array.split ===================================== #
