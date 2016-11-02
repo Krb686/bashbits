@@ -192,10 +192,14 @@ function array.dump_keys {
 }
 
 # ================ Function: array.dump_values =============================== #
-# Description: 
-# Usage: 
-# Return Codes:
-# Order:
+# Description:                                                                 #
+#     Dump array values to stdout.                                             #
+# Usage:                                                                       #
+#     array.dump_values <array_name>                                           #
+# Return Codes:                                                                #
+#     0 if successful                                                          #
+#     1 if <array_name> is not an array                                        #
+# Order:                                                                       #
 # ============================================================================ #
 function array.dump_values {
     local array_name="${1:?"No array_name provided to 'array.dump_values'!"}"

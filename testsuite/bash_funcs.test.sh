@@ -145,6 +145,23 @@ function array.dump_keys.test {
     [[ "$str" == "el1"$'\n'"el2" ]];     check_pass
 }
 
+function array.dump_values.test {
+
+    local i=0
+    local array1=("el1" "el2")
+    local -A array2=(["el1"]="a" ["el2"]="b")
+
+    array.dump_values "bogusVar";          check_fail 1
+    array.dump_values "i";                 check_fail 1
+    array.dump_values "array1" >/dev/null; check_pass
+
+    local str="$(array.dump_values "array1")"
+    [[ "$str" == "el1"$'\n'"el2" ]];       check_pass
+
+    local str="$(array.dump_values "array2")"
+    [[ "$str" == "a"$'\n'"b" ]];           check_pass
+}
+
 function array.push.test {
 
     # Should be able to push individual elements, or a list of elements
