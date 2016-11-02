@@ -6,6 +6,7 @@ declare -a testfuncs
 testfuncs+=("array.contains_key.test")
 testfuncs+=("array.contains_value.test")
 testfuncs+=("array.delete_by_key.test")
+testfuncs+=("array.delete_by_value.test")
 testfuncs+=("array.push.test")
 testfuncs+=("bash.is_var_ro.test")
 
@@ -112,6 +113,19 @@ function array.delete_by_key.test {
     array.delete_by_key "array2" "k1";        check_pass
     array.delete_by_key "array1" "0";         check_pass
 
+}
+
+function array.delete_by_value.test {
+
+    local i=0
+    local -ar array1=("el1" "el2")
+    local -a array2=("el1" "el1" "el2" "el3")
+
+    array.delete_by_value "arrayBogus" "el1"; check_fail 4
+    array.delete_by_value "i" "el1";          check_fail 3
+    array.delete_by_value "array1" "el1";     check_fail 2
+    array.delete_by_value "array2" "el4";     check_fail 1
+    array.delete_by_value "array2" "el3";     check_pass
 }
 
 function array.push.test {

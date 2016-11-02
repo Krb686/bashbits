@@ -1,6 +1,27 @@
 #!/bin/bash
 
+# ======== Function Descriptions ======== #
 # array
+#     - array.contains_key		Check if an array contains a key
+#     - array.contains_value		Check if an array contains a value
+#     - array.delete_by_key		Delete element from array specified by key
+#     - array.delete_by_value		Delete all elements from array specified by value
+#     - array.dump_keys			Print out all array keys
+#     - array.dump_values		Print out all array values
+#     - array.get_by_key		Get single array element specified by key
+#     - array.get_by_value		Get all array elements specified by value
+#     - array.get_keys			Get all array keys
+#     - array.get_values		Get all array values
+#     - array.is_array			Check if variable is an array
+#     - array.is_associative		Check if array is associative type
+#     - array.is_standard		Check if array is standard typr
+#     - array.join			Join 2 arrays.  Elements of 2nd array merged into 1st array.
+#     - array.len			Return length of an array
+#     - array.pop			Remove last element of a standard array
+#     - array.push			Add element to the end of a standard array
+#     - array.remove_duplicates		Remove duplicate entries
+#     - array.set_element		Set an element of an array, by specifying key and value
+#     - array.split			
 # bash
 # exec
 # file
@@ -85,7 +106,7 @@ function array.contains_value {
 
 # ================ Function: array.delete_by_key ============================= #
 # Description:                                                                 #
-#     Delete element from array indexed by <key.                               #
+#     Delete element from array indexed by <key>                               #
 # Usage:                                                                       #
 #     array.delete_by_key <array> <key>                                        #
 # Return Codes:                                                                #
@@ -131,21 +152,24 @@ function array.delete_by_value {
     array.is_array "$array_name" || return 3
     bash.is_var_ro "$array_name" && return 2
 
-    array.is_standard "$array_name" && local -a tmparray
-    array.is_associative "$array_name" && local -A tmparray 
-
     local keys="$(array.get_keys "$array_name")"
 
     local val_found=0
+    local arraystring=""
     while read -r key; do
         local value="$(array.get_by_key "$array_name" "$key")"
         if [[ "$value" == "$val" ]]; then
             val_found=1
         else
-            array.set_element "$array_name" "$key" "$value"
+            arraystring+="[\"$key\"]=\"$value\" "
         fi
     done <<< "$keys"
-    [[ $val_found -eq 1 ]]
+
+    if [[ $val_found -eq 1 ]]; then
+        eval "$array_name=($arraystring)"
+    else
+        return 1
+    fi
 }
 
 # ================ Function: array.dump_keys ================================= #
@@ -155,7 +179,12 @@ function array.delete_by_value {
 # Order:
 # ============================================================================ #
 function array.dump_keys {
-:
+    local array_name="${1:?"No array to 'array.dump_keys'!"}"
+
+    array.is_array "$array_name" || return 1
+    while read -r el; do
+        printf "%s\n" "$el"
+    done <<< "$(array.get_keys "$array_name")"
 }
 
 # ================ Function: array.dump_values =============================== #
@@ -167,11 +196,31 @@ function array.dump_keys {
 function array.dump_values {
     local aname="${1:?""}"
 
-    array.is_array "$aname" || exit 1
+    array.is_array "$aname" || return 1
 
     while read -r el; do
         printf "%s\n" "$el"
-    done <<< "$(array.get_values "$aname")"
+    done <<< "$(array.get_values "$array_name")"
+}
+
+# ================ Function: array.get_by_key ================================ #
+# Description:                                                                 #
+# Usage:                                                                       #
+# Return Codes:                                                                #
+# Order:                                                                       #
+# ============================================================================ #
+function array.get_by_key {
+    local array_name="${1:?""}"
+    local key="${2:?""}"
+
+    local tmp="$array_name[\"$key\"]"
+    printf "%s" "${!tmp}"
+}
+
+# ================ Function: array.get_by_value ============================== #
+# ============================================================================ #
+function array.get_by_value {
+:
 }
 
 # ================ Function: array.get_keys ================================== #
@@ -187,21 +236,19 @@ function array.get_keys {
 
     array.is_array "$aname" || exit 1
     local tmp="\"\${!$aname[@]}\""
-    printf "%s" "$(eval "echo $tmp")"
+    #local keys="$(eval "echo $tmp")"
+
+    loopStr="for key in \"\${!$aname[@]}\"; do
+                 printf \"%s\n\" \"\$key\"
+             done"
+
+    eval "$loopStr"
+
+    #for key in "$(eval "echo $tmp")"; do
+    #    echo "key = $key"
+    #done
 }
 
-# ================ Function: array.get_by_key ================================ #
-# Description:                                                                 #
-# Usage:                                                                       #
-# Return Codes:                                                                #
-# Order:                                                                       #
-# ============================================================================ #
-function array.get_by_key {
-    local array_name="${1:?""}"
-    local key="${2:?""}"
-    local tmp="$array_name[\"$key\"]"
-    printf "%s" "${!tmp}"
-}
 
 
 # ================ Function: array.get_values ================================ #
@@ -379,7 +426,7 @@ function array.remove_duplicates {
 #     1 if                                                                     #
 # Order:                                                                       #
 # ============================================================================ #
-function array.add_element {
+function array.set_element {
     local array_name="${1:?""}"
     local key="${2:?""}"
     local value="${3:?""}"
