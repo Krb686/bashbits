@@ -3,13 +3,6 @@
 . "/home/kevin/gitrepos/bashbits/bash_funcs.sh"
 
 declare -a testfuncs
-testfuncs+=("array.contains_key.test")
-testfuncs+=("array.contains_value.test")
-testfuncs+=("array.delete_by_key.test")
-testfuncs+=("array.delete_by_value.test")
-testfuncs+=("array.push.test")
-testfuncs+=("bash.is_var_ro.test")
-
 declare -A testpasses
 declare -A testfailures
 declare -i total_passes=0
@@ -18,6 +11,13 @@ declare -i total_failures=0
 INFO_FLAG=1
 DEBUG_FLAG=0
 ERROR_FLAG=1
+
+function parse_test_funcs {
+    local func_string="$(cat $0 | grep -Po '(?<=^function ).*\.test(?= {)')"
+    while read -r func; do
+        testfuncs+=("$func")
+    done <<< "$func_string"
+}
 
 # ================ Function: pass ================ #
 function pass {
@@ -62,8 +62,8 @@ function execute_tests {
         "$testfunc"
 
         # Report passes and failures
-        print.info "    --> passes: ${testpasses["$testfunc"]}"
-        print.info "    --> failures: ${testfailures["$testfunc"]}"
+        print.info "    --> pass: ${testpasses["$testfunc"]}"
+        print.info "    --> fail: ${testfailures["$testfunc"]}"
     done
 
     # Generate summary report
@@ -128,6 +128,23 @@ function array.delete_by_value.test {
     array.delete_by_value "array2" "el3";     check_pass
 }
 
+function array.dump_keys.test {
+
+    local i=0
+    local array1=("el1" "el2")
+    local -A array2=(["el1"]="a" ["el2"]="b")
+
+    array.dump_keys "bogusVar";          check_fail 1
+    array.dump_keys "i";                 check_fail 1
+    array.dump_keys "array1" >/dev/null; check_pass
+
+    local str="$(array.dump_keys "array1")"
+    [[ "$str" == "0"$'\n'"1" ]];         check_pass
+
+    local str="$(array.dump_keys "array2")"
+    [[ "$str" == "el1"$'\n'"el2" ]];     check_pass
+}
+
 function array.push.test {
 
     # Should be able to push individual elements, or a list of elements
@@ -163,4 +180,5 @@ function bash.is_var_ro.test {
     bash.is_var_ro "var3";    check_pass
 }
 
+parse_test_funcs
 execute_tests

@@ -173,10 +173,14 @@ function array.delete_by_value {
 }
 
 # ================ Function: array.dump_keys ================================= #
-# Description: 
-# Usage: 
-# Return Codes:
-# Order:
+# Description:                                                                 #
+#     Dump array keys to stdout.                                               #
+# Usage:                                                                       #
+#     array.dump_keys <array_name>                                             #
+# Return Codes:                                                                #
+#     0 if successful                                                          #
+#     1 if <array_name> is not an array                                        #
+# Order:                                                                       #
 # ============================================================================ #
 function array.dump_keys {
     local array_name="${1:?"No array to 'array.dump_keys'!"}"
@@ -194,10 +198,9 @@ function array.dump_keys {
 # Order:
 # ============================================================================ #
 function array.dump_values {
-    local aname="${1:?""}"
+    local array_name="${1:?"No array_name provided to 'array.dump_values'!"}"
 
-    array.is_array "$aname" || return 1
-
+    array.is_array "$array_name" || return 1
     while read -r el; do
         printf "%s\n" "$el"
     done <<< "$(array.get_values "$array_name")"
