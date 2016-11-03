@@ -212,14 +212,21 @@ function array.dump_values {
 
 # ================ Function: array.get_by_key ================================ #
 # Description:                                                                 #
+#     Return value indexed by <key> indirectly from array <array_name>         #
 # Usage:                                                                       #
+#     array.get_by_key <array_name> <key>                                      #
 # Return Codes:                                                                #
+#     0 if successful                                                          #
+#     1 if <array_name> did not contain <key>                                  #
+#     2 if <array_name> is not an array                                        #
 # Order:                                                                       #
 # ============================================================================ #
 function array.get_by_key {
-    local array_name="${1:?""}"
-    local key="${2:?""}"
+    local array_name="${1:?"No array_name provided to 'array.get_by_key'!"}"
+    local key="${2:?"No key provided to 'array.get_by_key'!"}"
 
+    array.is_array "$array_name" || return 2
+    array.contains_key "$array_name" "$key" || return 1
     local tmp="$array_name[\"$key\"]"
     printf "%s" "${!tmp}"
 }
