@@ -232,9 +232,34 @@ function array.get_by_key {
 }
 
 # ================ Function: array.get_by_value ============================== #
+# Description:                                                                 #
+#     Return all keys with indexing <value> indirectly from array <array_name> #
+# Usage:                                                                       #
+#     array.get_by_value <array_name> <value>                                  #
+# Return Codes:                                                                #
+#     0 if at least 1 key was returned                                         #
+#     1 if no keys index the specified <value>                                 #
+#     2 if <array_name> is not an array                                        #
+# Order:                                                                       #
 # ============================================================================ #
 function array.get_by_value {
-:
+    local array_name="${1:?"No array_name provided to 'array.get_by_value'!"}"
+    local value="${2:?"No value provided to 'array.get_by_value'!"}"
+
+    array.is_array "$array_name" || return 2
+    array.contains_value "$array_name" "$value" || return 1
+
+    local keys="$(array.get_keys "$array_name")"
+
+    local val_found=0
+    while read -r key; do
+        local val="$(array.get_by_key "$array_name" "$key")"
+        if [[ "$val" == "$value" ]]; then
+            val_found=1
+            printf "%s\n" "$key"
+        fi
+    done <<< "$keys"
+    [[ "$array_found" -eq 1 ]]
 }
 
 # ================ Function: array.get_keys ================================== #

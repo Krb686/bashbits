@@ -180,6 +180,30 @@ function array.get_by_key.test {
 
 }
 
+function array.get_by_value.test {
+
+    local i=0
+    local -a array1=("el1" "el2" "el2")
+    local -A array2=(["el1"]="a" ["el2"]="b" ["el3"]="b")
+
+    array.get_by_value "bogusVar" "val1";    check_fail 2
+    array.get_by_value "i" "val1";           check_fail 2
+    array.get_by_value "array1" "el3";       check_fail 1
+
+    local str="$(array.get_by_value "array1" "el1")";       check_pass
+    [[ "$str" == "0" ]];                                    check_pass
+
+    local str="$(array.get_by_value "array1" "el2")";       check_pass
+    [[ "$str" == "1"$'\n'"2" ]];                            check_pass
+
+    local str="$(array.get_by_value "array2" "a")";         check_pass
+    [[ "$str" == "el1" ]];                                  check_pass
+
+    local str="$(array.get_by_value "array2" "b")";         check_pass
+    [[ "$str" == "el3"$'\n'"el2" ]];                        check_pass
+
+}
+
 function array.push.test {
 
     # Should be able to push individual elements, or a list of elements
