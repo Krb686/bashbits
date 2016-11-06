@@ -40,7 +40,8 @@ function test_report {
 }
 
 function check_pass {
-    [[ $? -eq 0 ]] && pass || fail
+    local tc=$?
+    [[ $tc -eq 0 ]] && pass || fail $tc 0
 }
 
 function check_fail {
