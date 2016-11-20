@@ -263,50 +263,53 @@ function array.get_by_value {
 }
 
 # ================ Function: array.get_keys ================================== #
-# Description:
-# Usage: get_array_keys <array>                                                #
+# Description:                                                                 #
+#     Return all keys from <array>                                             #
+#     Keys are returned as a newline separated list                            #
+# Usage:                                                                       #
+#     array.get_keys <array>                                                   #
 # Return Codes:                                                                #
-#     0 if                                                                     #
-#     1 if                                                                     #
-# Order:
+#     0 if successful                                                          #
+#     1 if <array_name> is not an array                                        #
+# Order:                                                                       #
 # ============================================================================ #
 function array.get_keys {
-    local aname="${1:?"No array to 'get_array_keys'!"}"
+    local array_name="${1:?"No array to 'array.get_keys'!"}"
 
-    array.is_array "$aname" || exit 1
-    local tmp="\"\${!$aname[@]}\""
-    #local keys="$(eval "echo $tmp")"
+    array.is_array "$array_name" || return 1
 
-    loopStr="for key in \"\${!$aname[@]}\"; do
-                 printf \"%s\n\" \"\$key\"
-             done"
+    # TODO - see if there is a better way to do this
+    local loopStr="for key in \"\${!$array_name[@]}\"; do
+                     printf \"%s\n\" \"\$key\"
+                   done"
 
     eval "$loopStr"
-
-    #for key in "$(eval "echo $tmp")"; do
-    #    echo "key = $key"
-    #done
 }
 
 
 
 # ================ Function: array.get_values ================================ #
-# Description: 
-# Usage: 
-# Return Codes:
-# Order:
+# Description:                                                                 #
+#     Return all values from <array>                                           #
+#     Values are returned as a newline separated list                          #
+# Usage:                                                                       #
+#     array.get_values <array>                                                 #
+# Return Codes:                                                                #
+#     0 if successful                                                          #
+#     1 if <array_name> is not an array                                        #
+# Order:                                                                       #
 # ============================================================================ #
 function array.get_values {
-    local aname="${1:?""}"
+    local array_name="${1:?"Usage: array.get_values <array>"}"
 
-    array.is_array "$aname" || exit 1
+    array.is_array "$array_name" || return 1
 
-    local tmp="$aname[@]"
+    # TODO - see if there is a better way to do this
+    local loopStr="for val in \"\${$array_name[@]}\"; do
+                       printf \"%s\n\" \"\$val\"
+                   done"
 
-    local el
-    for el in "${!tmp}"; do
-        printf "%s\n" "$el"
-    done
+    eval "$loopStr"
 }
 
 # ================ Function: array.is_array ================================== #

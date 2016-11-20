@@ -205,6 +205,38 @@ function array.get_by_value.test {
 
 }
 
+function array.get_keys.test {
+
+    local i=0
+    local -a array1=("el1" "el2" "el2")
+    local -A array2=(["el 1"]="a" ["el 2"]="b" ["el 3"]="b")
+
+    array.get_keys "bogusVar";  check_fail 1
+    array.get_keys "i";         check_fail 1
+
+    local str="$(array.get_keys "array1")";  check_pass
+    [[ "$str" == "0"$'\n'"1"$'\n'"2" ]];     check_pass
+
+    local str="$(array.get_keys "array2")";  check_pass
+    [[ "$str" == "el 3"$'\n'"el 2"$'\n'"el 1" ]]; check_pass  # Order is NOT guaranteed!
+}
+
+function arrray.get_values.test {
+
+    local i=0
+    local -a array1=("el1" "el2" "el2")
+    local -A array2=(["el 1"]="a" ["el 2"]="b" ["el 3"]="c")
+
+    array.get_values "bogusVar";  check_fail 1
+    array.get_values "i";         check_fail 1
+
+    local str="$(array.get_values "array1")";    check_pass
+    [[ "$str" == "el1"$'\n'"el2"$'\n'"el2" ]];   check_pass
+
+    local str="$(array.get_values "array2")";    check_pass
+    [[ "$str" == "c"$'\n'"b"$'\n'"a" ]];         check_pass
+}
+
 function array.push.test {
 
     # Should be able to push individual elements, or a list of elements
