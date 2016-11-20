@@ -313,12 +313,14 @@ function array.get_values {
 }
 
 # ================ Function: array.is_array ================================== #
-# Description:
-# Usage: is_array <var>                                                        #
+# Description:                                                                 #
+#     Check if a variable is an array                                          #
+# Usage:                                                                       #
+#     array.is_array <var>                                                     #
 # Return Codes:                                                                #
 #     0 if <var> is an array                                                   #
 #     1 if <var> is not an array                                               #
-# Order:
+# Order:                                                                       #
 # ============================================================================ #
 function array.is_array {
     local var="${1:?"No var to 'is_array'!"}"
@@ -330,17 +332,18 @@ function array.is_array {
 
 
 # ================ Function: array.is_associative ============================ #
-# Description:
-# Usage: is_array_associative <var>                                            #
+# Description:                                                                 #
+#     Check if an array is associative                                         #
+# Usage:                                                                       #
+#     array.is_associative <array>                                             #
 # Return Codes:                                                                #
 #     0 if <var> is an associative array                                       #
 #     1 if <var> is not an associative array                                   #
-#     2 if <var> is invalid                                                    #
-# Order:
+# Order:                                                                       #
 # ============================================================================ #
 function array.is_associative {
-    local aname="${1:?""}"
-    bash.var_contains_attr "$aname" "A"  && return 0 || return 1
+    local array_name="${1:?"Usage: array.is_associative <array>"}"
+    bash.var_contains_attr "$array_name" "A"  && return 0 || return 1
 }
 
 # ================ Function: array.is_standard =============================== #

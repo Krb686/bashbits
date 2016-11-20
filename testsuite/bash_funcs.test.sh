@@ -237,6 +237,43 @@ function arrray.get_values.test {
     [[ "$str" == "c"$'\n'"b"$'\n'"a" ]];         check_pass
 }
 
+function array.is_array.test {
+
+    local i=0
+    local -a array1=("el1" "el2" "el2")
+    local -A array2=(["el 1"]="a" ["el 2"]="b" ["el 3"]="c")
+
+    array.is_array "bogus";    check_fail 1
+    array.is_array "i";        check_fail 1
+    array.is_array "array1";   check_pass
+    array.is_array "array2";   check_pass
+
+}
+
+function array.is_associative.test {
+
+    local i=0
+    local -a array1=("el1" "el2" "el2")
+    local -A array2=(["el 1"]="a" ["el 2"]="b" ["el 3"]="c")
+
+    array.is_associative "bogus";   check_fail 1
+    array.is_associative "i";       check_fail 1
+    array.is_associative "array1";  check_fail 1
+    array.is_associative "array2";  check_pass
+}
+
+function array.is_standard.test {
+
+    local i=0
+    local -a array1=("el1" "el2" "el2")
+    local -A array2=(["el 1"]="a" ["el 2"]="b" ["el 3"]="c")
+
+    array.is_standard "bogus";    check_fail 1
+    array.is_standard "i";        check_fail 1
+    array.is_standard "array1";   check_pass
+    array.is_standard "array2";   check_fail 1
+}
+
 function array.push.test {
 
     # Should be able to push individual elements, or a list of elements
