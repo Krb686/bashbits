@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. "/home/kevin/gitrepos/bashbits/bash_funcs.sh"
+. "/home/kevin/gitrepos/bashbits/lib/bash_funcs.sh"
 
 declare -a testfuncs
 declare -A testpasses
