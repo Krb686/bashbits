@@ -53,7 +53,8 @@
 #     array.contains_element <array> <key> <value>                             #
 # Return Codes:                                                                #
 #     0 if array contains the <key> - <value> pair element                     #
-#     1 if array does not contain the element                                  #
+#     1 if array does not contain the <key><value> element.                    #
+#     2 if <array_name> is not an array                                        #
 # Order:                                                                       #
 # ============================================================================ #
 function array.contains_element {
@@ -61,6 +62,11 @@ function array.contains_element {
     local key="${2:?""}"
     local val="${3:?""}"
 
+    array.is_array "$array_name" || return 2
+
+    array.contains_key "$array_name" "$key" || return 1
+    local rval="$(array.get_by_key "$array_name" "$key")"
+    [[ "$rval" == "$val" ]] && return 0 || return 1
 }
 
 # ================ Function: array.contains_key ============================== #

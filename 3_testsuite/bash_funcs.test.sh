@@ -75,6 +75,25 @@ function execute_tests {
 # ============================================================================ #
 # ================ Test Functions ============================================ #
 
+function array.contains_element.test {
+
+    local i=0
+    local -a array_std1=( "a" "b" "c" )
+    local -A array_assoc1=( ["k1"]="v1" ["k2"]="v2" ["k3"]="v3" ["k 4"]="v 4" )
+
+
+    array.contains_element "bogusArray" "k1" "v1";     check_fail 2 
+
+    array.contains_element "array_std1" "3" "z";       check_fail 1
+    array.contains_element "array_std1" "0" "z";       check_fail 1
+    array.contains_element "array_assoc1" "k5" "v5";   check_fail 1 
+    array.contains_element "array_assoc1" "k1" "v5";   check_fail 1
+
+    array.contains_element "array_std1" "0" "a";       check_pass
+    array.contains_element "array_assoc1" "k1" "v1";   check_pass
+    array.contains_element "array_assoc1" "k 4" "v 4"; check_pass
+}
+
 function array.contains_key.test {
 
     local -a array1=("v1")
@@ -289,22 +308,22 @@ function array.join.test {
     local -A array_assoc1=(["el 1"]="a" ["el 2"]="b" ["el 3"]="c")
     local -A array_assoc2=(["el 4"]="d" ["el 5"]="e" ["el 6"]="f")
 
-    array.join "bogus1"     "bogus2";     check_fail 3
-    array.join "bogus1"     "array_std2"; check_fail 3
-    array.join "array_std1" "bogus2";     check_fail 2
+    array.join "bogus1"     "bogus2";          check_fail 3
+    array.join "bogus1"     "array_std2";      check_fail 3
+    array.join "array_std1" "bogus2";          check_fail 2
 
     # Array mismatch
-    array.join "array_std1" "array_assoc2";  check_fail 1
-    array.join "array_assoc2" "array_std1";  check_fail 1
+    array.join "array_std1" "array_assoc2";    check_fail 1
+    array.join "array_assoc2" "array_std1";    check_fail 1
 
     # Join standard arrays
-    array.join "array_std1" "array_std2";    check_pass
-    array.contains_value "array_std2" "el1"; check_pass
-    array.contains_value "array_std2" "el2"; check_pass
-    array.contains_value "array_std2" "el3"; check_pass
+    array.join "array_std1" "array_std2";      check_pass
+    array.contains_value "array_std2" "el1";   check_pass
+    array.contains_value "array_std2" "el2";   check_pass
+    array.contains_value "array_std2" "el3";   check_pass
 
     # Join associative arrays
-    array.join "array_assoc1" "array_assoc2"; check_pass
+    array.join "array_assoc1" "array_assoc2";  check_pass
 
     
 
