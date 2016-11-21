@@ -324,8 +324,9 @@ function array.join.test {
 
     # Join associative arrays
     array.join "array_assoc1" "array_assoc2";  check_pass
-
-    
+    array.contains_element "array_assoc2" "el 1" "a"; check_pass
+    array.contains_element "array_assoc2" "el 2" "b"; check_pass
+    array.contains_element "array_assoc2" "el 3" "c"; check_pass
 
 }
 
