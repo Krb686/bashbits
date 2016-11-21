@@ -2,6 +2,7 @@
 
 # ======== Function Descriptions ======== #
 # array
+#     - array.contains_element          Check if an array contains a key - value pair
 #     - array.contains_key		Check if an array contains a key
 #     - array.contains_value		Check if an array contains a value
 #     - array.delete_by_key		Delete element from array specified by key
@@ -23,12 +24,44 @@
 #     - array.set_element		Set an element of an array, by specifying key and value
 #     - array.split			
 # bash
+#     - bash.requires
+#     - bash.is_var_ro
+#     - bash.is_var_set
+#     - bash.var_contains_attr
 # exec
+#     - exec.exec_locked
+#     - exec.get_caller
+#     - exec.is_call_internal
+#     - exec.is_locked
 # file
+#     - file.despace_name
+#     - file.wait_for_file
 # io
+#     - io.is_fd_term
+#     - io.is_fd_valid
 # print
+#     - print.debug
+#     - print.error
+#     - print.info
+#     - print.log
+#     - print.status
 # string
+#     - string.colorize
+#     - string.contains
+#     - string.is_alpha
+#     - string.is_alphanum
+#     - string.is_num
+# tree
+#     - tree.add_node
+#     - tree.create
+#     - tree.delete_node
+#     - tree.node_exists
 # yum
+#     - yum.get_package_deps
+#     - yum.get_all_package_deps
+#     - yum.is_package_installed
+#     - yum.list_package_contents
+#     - yum.update_repo
 
 
 # TODO - add bash.requires to all functions
@@ -418,12 +451,13 @@ function array.join {
 
 # ================ Function: array.len ======================================= #
 # Description:                                                                 #
+#     Return length of an array                                                #
 # Usage:                                                                       #
 # Return Codes:                                                                #
 # Order:                                                                       #
 # ============================================================================ #
 function array.len {
-    local aname="${1:?""}"
+    local array_name="${1:?""}"
     declare -p "$aname"
     array.is_array "$aname" || return 1
 
