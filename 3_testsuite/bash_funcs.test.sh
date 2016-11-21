@@ -1,6 +1,7 @@
 #!/bin/bash
 
-. "../2_lib/bash_funcs.sh"
+dir="$(readlink -f "$(dirname $0)")"
+. "$dir/bash_funcs.sh"
 
 declare -a testfuncs
 declare -A testpasses
@@ -77,16 +78,18 @@ function execute_tests {
 function array.contains_key.test {
 
     local -a array1=("v1")
-    declare -A array2=(["k2"]="v2")
+    local -A array2=(["k2"]="v2")
+    local -A array3=( ["k 1"]="x" ["k 2"]="y" )
     local i=0
 
 
-    array.contains_key "array3" "k2"; check_fail 3
-    array.contains_key "i" "k1";      check_fail 2
-    array.contains_key "array1" "k3"; check_fail 1
-    array.contains_key "array2" "k3"; check_fail 1
-    array.contains_key "array1" "0";  check_pass
-    array.contains_key "array2" "k2"; check_pass
+    array.contains_key "arrayBogus" "k2";  check_fail 3
+    array.contains_key "i" "k1";       check_fail 2
+    array.contains_key "array1" "k3";  check_fail 1
+    array.contains_key "array2" "k3";  check_fail 1
+    array.contains_key "array1" "0";   check_pass
+    array.contains_key "array2" "k2";  check_pass
+    array.contains_key "array3" "k 1"; check_pass
 }
 
 function array.contains_value.test {
@@ -168,6 +171,7 @@ function array.get_by_key.test {
     local i=0
     local -a array1=("el1" "el2")
     local -A array2=(["el1"]="a" ["el2"]="b")
+    local -A array3=( ["k 1"]="x" ["k 2"]="y" ["k 3"]="z" )
 
     array.get_by_key "bogusVar" "key1";                   check_fail 2
     array.get_by_key "i" "key1";                          check_fail 2
@@ -178,6 +182,9 @@ function array.get_by_key.test {
 
     local str="$(array.get_by_key "array2" "el1")"        check_pass
     [[ "$str" == "a" ]];                                  check_pass
+
+    local str="$(array.get_by_key "array3" "k 1")";       check_pass
+    [[ "$str" == "x" ]];                                  check_pass
 
 }
 
@@ -274,6 +281,35 @@ function array.is_standard.test {
     array.is_standard "array2";   check_fail 1
 }
 
+function array.join.test {
+
+    local i=0
+    local -a array_std1=("el1" "el2" "el3")
+    local -a array_std2=("el4" "el5" "el6")
+    local -A array_assoc1=(["el 1"]="a" ["el 2"]="b" ["el 3"]="c")
+    local -A array_assoc2=(["el 4"]="d" ["el 5"]="e" ["el 6"]="f")
+
+    array.join "bogus1"     "bogus2";     check_fail 3
+    array.join "bogus1"     "array_std2"; check_fail 3
+    array.join "array_std1" "bogus2";     check_fail 2
+
+    # Array mismatch
+    array.join "array_std1" "array_assoc2";  check_fail 1
+    array.join "array_assoc2" "array_std1";  check_fail 1
+
+    # Join standard arrays
+    array.join "array_std1" "array_std2";    check_pass
+    array.contains_value "array_std2" "el1"; check_pass
+    array.contains_value "array_std2" "el2"; check_pass
+    array.contains_value "array_std2" "el3"; check_pass
+
+    # Join associative arrays
+    array.join "array_assoc1" "array_assoc2"; check_pass
+
+    
+
+}
+
 function array.push.test {
 
     # Should be able to push individual elements, or a list of elements
@@ -284,7 +320,11 @@ function array.push.test {
 
     local el_list=""
     for i in {0..2}; do
-        el_list+="$i"$'\n'
+        if [[ $i -ne 2 ]]; then
+            el_list+="$i"$'\n'
+        else
+            el_list+="$i"
+        fi
     done
 
 

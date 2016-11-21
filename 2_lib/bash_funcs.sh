@@ -46,6 +46,22 @@
 # - process
 
 
+# ================ Function: array.contains_element ========================== #
+# Description:                                                                 #
+#     Check if an array contains an element (key-value pair)                   #
+# Usage:                                                                       #
+#     array.contains_element <array> <key> <value>                             #
+# Return Codes:                                                                #
+#     0 if array contains the <key> - <value> pair element                     #
+#     1 if array does not contain the element                                  #
+# Order:                                                                       #
+# ============================================================================ #
+function array.contains_element {
+    local array_name="${1:?"Usage: array.contains_element <array> <key> <value>"}"
+    local key="${2:?""}"
+    local val="${3:?""}"
+
+}
 
 # ================ Function: array.contains_key ============================== #
 # Description:                                                                 #
@@ -68,10 +84,9 @@ function array.contains_key {
 
     local keys="$(array.get_keys "$array_name")"   
 
-    local el
-    for el in $keys; do
+    while read -r el; do
         [[ "$el" == "$key" ]] && return 0
-    done
+    done <<< "$keys"
     return 1
 }
 
@@ -362,24 +377,37 @@ function array.is_standard {
 
 # ================ Function: array.join ====================================== #
 # Description:                                                                 #
-#     Join elements from <array2> into <array1>                                #
+#     Join elements from <array1> into <array2> (left to right)                #
 # Usage:                                                                       #
 #     array.join <array1> <array2>                                             #
 # Return Codes:                                                                #
-#     3 if <aname1> is not an array.                                           #
-#     2 if <
+#     3 if <array_name1> is not an array.                                      #
+#     2 if <array_name2> is not an array.                                      #
+#     1 if array types do not match.                                           #
 # Order:                                                                       #
 # ============================================================================ #
 function array.join {
-    local aname1="${1:?"No array1 to 'join_arrays'!"}"
-    local aname2="${2:?"No array2 to 'join_arrays'!"}"
+    local array_name1="${1:?"No array1 to 'join_arrays'!"}"
+    local array_name2="${2:?"No array2 to 'join_arrays'!"}"
 
-    array.is_array "$aname1" || return 3
-    array.is_array "$aname2" || return 2
+    array.is_array "$array_name1" || return 3
+    array.is_array "$array_name2" || return 2
 
-    while read -r el; do
-        array.push "$aname1" "$el"
-    done <<< "$(array.get_values "$aname2")"
+    array.is_standard "$array_name1" && array.is_standard "$array_name2" && local mode="standard"
+    array.is_associative "$array_name1" && array.is_associative "$array_name2" && local mode="associative"
+
+    [[ "$mode" != "standard" && "$mode" != "associative" ]] && return 1
+
+    if [[ "$mode" == "standard" ]]; then
+        while read -r el; do
+            array.push "$array_name2" "$el"
+        done <<< "$(array.get_values "$array_name1")"
+    elif [[ "$mode" == "associative" ]]; then
+        while read -r key; do
+            local val="$(array.get_by_key "$array_name1" "$key")"
+            array.set_element "$array_name2" "$key" "$val"
+        done <<< "$(array.get_keys "$array_name1")"
+    fi
 }
 
 # ================ Function: array.len ======================================= #
@@ -423,7 +451,7 @@ function array.pop {
 # Order:                                                                       #
 # ============================================================================ #
 function array.push {
-    local aname="${1:?"No array to 'add_array_element'!"}"
+    local aname="${1:?"Usage: array.push <array> <el>"}"
     local el="${2:?"No element to 'add_array_element'!"}"
 
     array.is_array "$aname" || return 2
@@ -431,9 +459,9 @@ function array.push {
 
     string.contains "$el" $'\n'
     if [[ $? -eq 0 ]]; then
-        local -a tmparray
-        readarray -t tmparray <<< "$el"
-        array.join "$aname" "tmparray"
+        while read -r s_el; do
+            array.push "$aname" "$s_el"
+        done <<< "$el"
     else
         eval "$aname+=(\""$el"\")"
     fi
