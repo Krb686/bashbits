@@ -453,16 +453,18 @@ function array.join {
 # Description:                                                                 #
 #     Return length of an array                                                #
 # Usage:                                                                       #
+#     array.len <array>                                                        #
 # Return Codes:                                                                #
+#     0 if the array length is returned successfully                           #
+#     1 if <array_name> is not an array                                        #
 # Order:                                                                       #
 # ============================================================================ #
 function array.len {
     local array_name="${1:?""}"
-    declare -p "$aname"
-    array.is_array "$aname" || return 1
 
-    local str="\"\${#$aname[@]}\""
-    eval "echo $str"
+    array.is_array "$array_name" || return 1
+
+    eval "echo \${#$array_name[@]}"
 }
 
 

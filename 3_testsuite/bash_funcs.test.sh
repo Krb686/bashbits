@@ -330,6 +330,23 @@ function array.join.test {
 
 }
 
+function array.len.test {
+
+    local i=0
+    local -a array_std=( "el1" "el2" "el3" )
+    local -A array_assoc=( ["k1"]="v1" ["k2"]="v2" )
+
+    array.len "bogus";                  check_fail 1
+    array.len "i";                      check_fail 1
+
+    local l=$(array.len "array_std");   check_pass
+    [[ $l -eq 3 ]];                     check_pass
+
+    local l=$(array.len "array_assoc"); check_pass
+    [[ $l -eq 2 ]];                     check_pass
+
+}
+
 function array.push.test {
 
     # Should be able to push individual elements, or a list of elements
