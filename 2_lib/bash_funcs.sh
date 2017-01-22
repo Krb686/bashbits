@@ -181,8 +181,10 @@ function array.delete_by_key {
     bash.is_var_ro "$array_name" && return 2
     array.contains_key "$array_name" "$key" || return 1
 
+
     unset "$array_name[$key]"
     eval "$array_name=(\"\${$array_name[@]}\")"
+
 }
 
 # ================ Function: array.delete_by_value =========================== #
@@ -475,8 +477,17 @@ function array.len {
 # Order:
 # ============================================================================ #
 function array.pop {
-    local aname="${1:?""}"
-    array.is_standard "$aname" || exit 2
+    local array_name="${1:?""}"
+    local retvar="${2:?"No retvar provided!"}"
+
+    array.is_array "$array_name" || return 2
+    array.is_standard "$array_name" || return 1
+
+    local last_key=$(( $(array.len "$array_name" ) - 1 ))
+    local el="$(array.get_by_key "$array_name" $last_key)"
+    eval "$retvar=$el"
+
+    array.delete_by_key "$array_name" $last_key
 }
 
 

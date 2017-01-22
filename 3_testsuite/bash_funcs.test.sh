@@ -128,13 +128,21 @@ function array.delete_by_key.test {
     local -A array2=(["k1"]="el1")
     local -ar array3=("el1")
     local i=1
+    local len
 
     array.delete_by_key "arrayBogus" "k1";    check_fail 4 # Should return 4 if array param is not set.
     array.delete_by_key "i" "k1";             check_fail 3 # Should return 3 if array param is not an array.
     array.delete_by_key "array3" "k1";        check_fail 2 # Should return 2 if array param is readonly.
     array.delete_by_key "array2" "k2";        check_fail 1 # Should return 1 if array did not contain specified key.
     array.delete_by_key "array2" "k1";        check_pass
+    array.contains_key  "array2" "k1";        check_fail 1
+    len="$(array.len "array2")";              check_pass
+    [[ $len -eq 0 ]];                         check_pass
+
     array.delete_by_key "array1" "0";         check_pass
+    array.contains_key  "array1" "0";         check_fail 1
+    len=$(array.len "array1");                check_pass
+    [[ $len -eq 0 ]];                         check_pass
 
 }
 
@@ -344,6 +352,28 @@ function array.len.test {
 
     local l=$(array.len "array_assoc"); check_pass
     [[ $l -eq 2 ]];                     check_pass
+
+}
+
+function array.pop.test {
+
+    local -a array_std=( "el1" "el2" "el3" )
+    local -A array_assoc=()
+    local i=1
+    local val
+
+    array.pop "arrayBogus" "val";         check_fail 2
+    array.pop "array_assoc" "val";        check_fail 1
+
+    array.pop "array_std" "val";          check_pass
+    [[ "$val" == "el3" ]];                check_pass
+    local len="$(array.len "array_std")"; check_pass
+    [[ $len -eq 2 ]];                     check_pass
+
+    array.pop "array_std" "val";          check_pass
+    [[ "$val" == "el2" ]];                check_pass
+    len=$(array.len "array_std");         check_pass
+    [[ $len -eq 1 ]];                     check_pass
 
 }
 
