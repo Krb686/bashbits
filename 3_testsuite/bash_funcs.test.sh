@@ -367,13 +367,13 @@ function array.pop.test {
     array.pop "arrayBogus" "val";         check_fail 2
     array.pop "array_assoc" "val";        check_fail 1
 
-    array.pop "array_std" "val";          check_pass
-    [[ "$val" == "el3" ]];                check_pass
+    array.pop "array_std" "rval";         check_pass
+    [[ "$rval" == "el3" ]];               check_pass
     local len="$(array.len "array_std")"; check_pass
     [[ $len -eq 2 ]];                     check_pass
 
-    array.pop "array_std" "val";          check_pass
-    [[ "$val" == "el2" ]];                check_pass
+    array.pop "array_std" "rval";         check_pass
+    [[ "$rval" == "el2" ]];               check_pass
     len=$(array.len "array_std");         check_pass
     [[ $len -eq 1 ]];                     check_pass
 
@@ -406,6 +406,17 @@ function array.push.test {
     array.contains_value "array_std" "0";            check_pass
     array.contains_value "array_std" "1";            check_pass
     array.contains_value "array_std" "2";            check_pass
+}
+
+function array.remove_duplicates.test {
+
+    local -a array1=(0 1 2 3 3 3 4 4 4 5 6 7 7 7 7 7 7 7 7 8 8 9)
+
+    array.remove_duplicates "arrayBogus";            check_fail 1
+    array.remove_duplicates "array1";                check_pass
+
+    local len="$(array.len "array1")"
+    [[ $len -eq 10 ]];                               check_pass
 }
 
 function bash.is_var_ro.test {

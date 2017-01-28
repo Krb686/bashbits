@@ -558,16 +558,17 @@ function array.push {
 # Order:
 # ============================================================================ #
 function array.remove_duplicates {
-    local aname="${1:?"No array to 'remove_array_duplicates'!"}"
+    local array_name="${1:?"No array to 'remove_array_duplicates'!"}"
+    array.is_array "$array_name" || return 1
 
     local -a tmparray
     local el
 
     while read -r el; do
         array.contains_value "tmparray" "$el" || array.push "tmparray" "$el"
-    done <<< "$(get_array_values "$aname")"
+    done <<< "$(array.get_values "$array_name")"
 
-    eval "$aname=(\"\${tmparray[@]}\")"
+    eval "$array_name=(\"\${tmparray[@]}\")"
 }
 
 
