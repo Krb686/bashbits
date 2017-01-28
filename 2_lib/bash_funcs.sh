@@ -92,14 +92,14 @@
 # ============================================================================ #
 function array.contains_element {
     local array_name="${1:?"Usage: array.contains_element <array> <key> <value>"}"
-    local key="${2:?""}"
+    local key="${2:?"No key "}"
     local val="${3:?""}"
 
     array.is_array "$array_name" || return 2
 
     array.contains_key "$array_name" "$key" || return 1
-    local rval="$(array.get_by_key "$array_name" "$key")"
-    [[ "$rval" == "$val" ]] && return 0 || return 1
+    array.get_by_key "$array_name" "$key" "retval"
+    [[ "$retval" == "$val" ]] && return 0 || return 1
 }
 
 # ================ Function: array.contains_key ============================== #
@@ -213,11 +213,11 @@ function array.delete_by_value {
     local val_found=0
     local arraystring=""
     while read -r key; do
-        local value="$(array.get_by_key "$array_name" "$key")"
-        if [[ "$value" == "$val" ]]; then
+        array.get_by_key "$array_name" "$key" "retval"
+        if [[ "$retval" == "$val" ]]; then
             val_found=1
         else
-            arraystring+="[\"$key\"]=\"$value\" "
+            arraystring+="[\"$key\"]=\"$retval\" "
         fi
     done <<< "$keys"
 
@@ -270,7 +270,7 @@ function array.dump_values {
 # Description:                                                                 #
 #     Return value indexed by <key> indirectly from array <array_name>         #
 # Usage:                                                                       #
-#     array.get_by_key <array_name> <key>                                      #
+#     array.get_by_key <array_name> <key> <retval>                             #
 # Return Codes:                                                                #
 #     0 if successful                                                          #
 #     1 if <array_name> did not contain <key>                                  #
@@ -280,11 +280,15 @@ function array.dump_values {
 function array.get_by_key {
     local array_name="${1:?"No array_name provided to 'array.get_by_key'!"}"
     local key="${2:?"No key provided to 'array.get_by_key'!"}"
+    local __retval="${3:?"No retval variable provided!"}"
 
     array.is_array "$array_name" || return 2
     array.contains_key "$array_name" "$key" || return 1
     local tmp="$array_name[\"$key\"]"
-    printf "%s" "${!tmp}"
+    #echo "retval = $__retval"
+    #echo "tmp1 = $tmp"
+    eval "$__retval=\"${!tmp}\""
+    #echo "tmp2 = $tmp"
 }
 
 # ================ Function: array.get_by_value ============================== #
@@ -301,6 +305,25 @@ function array.get_by_key {
 function array.get_by_value {
     local array_name="${1:?"No array_name provided to 'array.get_by_value'!"}"
     local value="${2:?"No value provided to 'array.get_by_value'!"}"
+    local rval_name="${3:?"No rval provided!"}"
+    
+
+    #declare -g "$rval_name"
+    #eval "$rval_name=0"
+    #return 0
+    
+    #bash.is_var_set "$rval_name" || declare "$rval_name"
+    
+    #local dvi="$(bash.gen_dvi "__rval")"            # get dynamic variable index
+    #local __rval$dvi="${3:?"No retval provided!"}"  # define dynamic variable, which is 1st layer of indirection
+    #local rvi="__rval$dvi"                          # define rvi (retval indirect), 2nd layer of indirection
+
+    # rvi -> __rval1 --> rval --> 5
+    #set -x
+    #eval "declare ${!rvi}=\"\""                     # double indirection - clear the actual value
+    #set +x
+
+    
 
     array.is_array "$array_name" || return 2
     array.contains_value "$array_name" "$value" || return 1
@@ -309,13 +332,19 @@ function array.get_by_value {
 
     local val_found=0
     while read -r key; do
-        local val="$(array.get_by_key "$array_name" "$key")"
-        if [[ "$val" == "$value" ]]; then
-            val_found=1
-            printf "%s\n" "$key"
+        array.get_by_key "$array_name" "$key" "rval2"
+        if [[ "$rval2" == "$value" ]]; then
+            if [[ $val_found -eq 0 ]]; then
+                unset "$rval_name"
+                val_found=1
+                eval "$rval_name+=\"${key}\""
+            else
+                eval "${rval_name}+=$'\n'\"${key}\""
+            fi
         fi
     done <<< "$keys"
-    [[ "$array_found" -eq 1 ]]
+    [[ "$val_found" -eq 1 ]]
+
 }
 
 # ================ Function: array.get_keys ================================== #
@@ -445,8 +474,8 @@ function array.join {
         done <<< "$(array.get_values "$array_name1")"
     elif [[ "$mode" == "associative" ]]; then
         while read -r key; do
-            local val="$(array.get_by_key "$array_name1" "$key")"
-            array.set_element "$array_name2" "$key" "$val"
+            array.get_by_key "$array_name1" "$key" "retval"
+            array.set_element "$array_name2" "$key" "$retval"
         done <<< "$(array.get_keys "$array_name1")"
     fi
 }
@@ -478,14 +507,14 @@ function array.len {
 # ============================================================================ #
 function array.pop {
     local array_name="${1:?""}"
-    local retvar="${2:?"No retvar provided!"}"
+    local popval="${2:?"No popval provided!"}"
 
     array.is_array "$array_name" || return 2
     array.is_standard "$array_name" || return 1
 
     local last_key=$(( $(array.len "$array_name" ) - 1 ))
-    local el="$(array.get_by_key "$array_name" $last_key)"
-    eval "$retvar=$el"
+    array.get_by_key "$array_name" $last_key "retval"
+    eval "$popval=$retval"
 
     array.delete_by_key "$array_name" $last_key
 }
@@ -567,6 +596,21 @@ function array.set_element {
 # ============================================================================ #
 function array.split {
 :
+}
+
+# ================ Function: bash.generate_dynamic_var ======================= #
+# Description:
+# Usage:
+# Return Codes:
+# Order:
+# ============================================================================ #
+function bash.gen_dvi {
+    local prefix="${1:?"No prefix provided!"}"
+
+    
+
+    local highest="$(declare -p | grep "$prefix" | awk -F'[ =]+' '{print $3}' | grep -Po "(?<=$prefix)[0-9]+" | sort -n | tail -n 1)"
+    printf $(( $highest + 1 ))
 }
 
 

@@ -89,6 +89,7 @@ function array.contains_element.test {
     array.contains_element "array_assoc1" "k5" "v5";   check_fail 1 
     array.contains_element "array_assoc1" "k1" "v5";   check_fail 1
 
+
     array.contains_element "array_std1" "0" "a";       check_pass
     array.contains_element "array_assoc1" "k1" "v1";   check_pass
     array.contains_element "array_assoc1" "k 4" "v 4"; check_pass
@@ -200,18 +201,18 @@ function array.get_by_key.test {
     local -A array2=(["el1"]="a" ["el2"]="b")
     local -A array3=( ["k 1"]="x" ["k 2"]="y" ["k 3"]="z" )
 
-    array.get_by_key "bogusVar" "key1";                   check_fail 2
-    array.get_by_key "i" "key1";                          check_fail 2
-    array.get_by_key "array1" "9";                        check_fail 1
+    array.get_by_key "bogusVar" "key1" "retval";          check_fail 2
+    array.get_by_key "i" "key1" "retval";                 check_fail 2
+    array.get_by_key "array1" "9" "retval";               check_fail 1
 
-    local str="$(array.get_by_key "array1" "0")";         check_pass
-    [[ "$str" == "el1" ]];                                check_pass
+    array.get_by_key "array1" "0" "retval";               check_pass
+    [[ "$retval" == "el1" ]];                             check_pass
 
-    local str="$(array.get_by_key "array2" "el1")"        check_pass
-    [[ "$str" == "a" ]];                                  check_pass
+    array.get_by_key "array2" "el1" "retval";             check_pass
+    [[ "$retval" == "a" ]];                               check_pass
 
-    local str="$(array.get_by_key "array3" "k 1")";       check_pass
-    [[ "$str" == "x" ]];                                  check_pass
+    array.get_by_key "array3" "k 1" "retval";             check_pass
+    [[ "$retval" == "x" ]];                               check_pass
 
 }
 
@@ -220,22 +221,23 @@ function array.get_by_value.test {
     local i=0
     local -a array1=("el1" "el2" "el2")
     local -A array2=(["el1"]="a" ["el2"]="b" ["el3"]="b")
+    local rval
 
-    array.get_by_value "bogusVar" "val1";    check_fail 2
-    array.get_by_value "i" "val1";           check_fail 2
-    array.get_by_value "array1" "el3";       check_fail 1
+    array.get_by_value "bogusVar" "val1" "rval";    check_fail 2
+    array.get_by_value "i" "val1" "rval";           check_fail 2
+    array.get_by_value "array1" "el3" "rval";       check_fail 1
 
-    local str="$(array.get_by_value "array1" "el1")";       check_pass
-    [[ "$str" == "0" ]];                                    check_pass
+    array.get_by_value "array1" "el1" "rval";       check_pass
+    [[ "$rval" == "0" ]];                           check_pass
 
-    local str="$(array.get_by_value "array1" "el2")";       check_pass
-    [[ "$str" == "1"$'\n'"2" ]];                            check_pass
+    array.get_by_value "array1" "el2" "rval";       check_pass
+    [[ "$rval" == "1"$'\n'"2" ]];                   check_pass
 
-    local str="$(array.get_by_value "array2" "a")";         check_pass
-    [[ "$str" == "el1" ]];                                  check_pass
+    array.get_by_value "array2" "a" "rval";         check_pass
+    [[ "$rval" == "el1" ]];                         check_pass
 
-    local str="$(array.get_by_value "array2" "b")";         check_pass
-    [[ "$str" == "el3"$'\n'"el2" ]];                        check_pass
+    array.get_by_value "array2" "b" "rval";         check_pass
+    [[ "$rval" == "el3"$'\n'"el2" ]];               check_pass
 
 }
 
