@@ -2,6 +2,7 @@
 
 # ======== Function Descriptions ======== #
 # array
+#     - array.array_from_list           Create a new array from a newline separated list of values
 #     - array.contains_element          Check if an array contains a key - value pair
 #     - array.contains_key		Check if an array contains a key
 #     - array.contains_value		Check if an array contains a value
@@ -22,8 +23,7 @@
 #     - array.push			Add element to the end of a standard array
 #     - array.remove_duplicates		Remove duplicate entries
 #     - array.set_element		Set an element of an array, by specifying key and value
-#     - array.sort_ascend
-#     - array.sort_descend
+#     - array.sort                      Sort an array in ascending or descending order, numerically or alphabetically
 # bash
 #     - bash.requires
 #     - bash.is_var_ro
@@ -65,7 +65,6 @@
 #     - yum.update_repo
 
 
-# TODO - sorting functions
 # TODO - array split
 # TODO - array reversing function
 # TODO - add bash.requires to all functions
@@ -643,6 +642,16 @@ function array.set_element {
 }
 
 # ================ Function: array.sort ====================================== #
+# Description:                                                                 #
+#     Sort an array ascending or descending, either numerically or             #
+#     alphabetically.                                                          #
+# Usage:                                                                       #
+#     array.sort <array> <dir> <mode>                                          #
+# Return Codes:                                                                #
+#     0 if __array was sorted successfully.                                    #
+#     1 if mode is invalid                                                     #
+#     2 if dir  is invalid                                                     #
+#     3 if __array is not a standard array                                     #
 # ============================================================================ #
 function array.sort {
     local __array="${1:?"No array provided!"}"
