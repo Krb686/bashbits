@@ -22,7 +22,8 @@
 #     - array.push			Add element to the end of a standard array
 #     - array.remove_duplicates		Remove duplicate entries
 #     - array.set_element		Set an element of an array, by specifying key and value
-#     - array.split			
+#     - array.sort_ascend
+#     - array.sort_descend
 # bash
 #     - bash.requires
 #     - bash.is_var_ro
@@ -64,6 +65,9 @@
 #     - yum.update_repo
 
 
+# TODO - sorting functions
+# TODO - array split
+# TODO - array reversing function
 # TODO - add bash.requires to all functions
 # TODO - automatic test case generation
 # bash
@@ -78,6 +82,26 @@
 # - memory
 # - process
 
+# ================ Function: array.array_from_list =========================== #
+# Description:                                                                 #
+#     Create a new array from a newline separated list of values               #
+# Usage:                                                                       #
+#     array.array_from_list <array> <list>                                     #
+# Return Codes:                                                                #
+#     0 if array was successfully created from list                            #
+#     1 if the specified array name is an existing variable                    #
+# Order:                                                                       #
+# ============================================================================ #
+function array.array_from_list {
+    local __array_name="${1:?"No array name provided!"}"
+    local __list_name="${2:?"No list name provided!"}"
+
+    bash.is_var_set "$__array_name" && return 1
+
+    while read -r el; do
+        eval "$__array_name+=("\"$el\"")"
+    done <<< "${!__list_name}"
+}
 
 # ================ Function: array.contains_element ========================== #
 # Description:                                                                 #
@@ -89,17 +113,18 @@
 #     1 if array does not contain the <key><value> element.                    #
 #     2 if <array_name> is not an array                                        #
 # Order:                                                                       #
+#     7                                                                        #
 # ============================================================================ #
 function array.contains_element {
     local array_name="${1:?"Usage: array.contains_element <array> <key> <value>"}"
     local key="${2:?"No key provided!"}"
     local val="${3:?"No val provided!"}"
 
-    array.is_array "$array_name" || return 2
-    array.contains_key "$array_name" "$key" || return 1
+    array.is_array "$array_name" || return 2 # O3
+    array.contains_key "$array_name" "$key" || return 1 # O5
 
-    local rval_ref=$(bash.generate_variable "rval")
-    array.get_by_key "$array_name" "$key" "$rval_ref"
+    local rval_ref=$(bash.generate_variable "rval") # O1
+    array.get_by_key "$array_name" "$key" "$rval_ref" # O6
     [[ "${!rval_ref}" == "$val" ]] && return 0 || return 1
 }
 
@@ -113,15 +138,16 @@ function array.contains_element {
 #     1 if array <array> does not contain key <key>                            #
 #     2 if <array_name> is not an array.                                       #
 # Order:                                                                       #
+#     5                                                                        #
 # ============================================================================ #
 function array.contains_key {
     local array_name="${1:?"No array_name to 'array.contains_key'!"}"
     local key="${2:?"No key to 'array.contains_key'!"}"
 
-    array.is_array "$array_name" || return 2
+    array.is_array "$array_name" || return 2  # O3
 
-    local rval_ref=$(bash.generate_variable "rval")
-    array.get_keys "$array_name" "$rval_ref"
+    local rval_ref=$(bash.generate_variable "rval") # O1
+    array.get_keys "$array_name" "$rval_ref" # O4
 
     while read -r el; do
         [[ "$el" == "$key" ]] && return 0
@@ -138,18 +164,17 @@ function array.contains_key {
 #     0 if array <array> contains value <value>                                #
 #     1 if array does not contain value.                                       #
 #     2 if <array> is set, but not an array.                                   #
-#     3 if <array> is unset.                                                   #
-# Order:
+# Order:                                                                       #
+#     5                                                                        #
 # ============================================================================ #
 function array.contains_value {
     local array_name="${1:?"No array_name to 'array.contains_value'!"}"
     local val="${2:?"No value to 'array.contains_value'!"}"
 
-    bash.is_var_set "$array_name" || return 3
-    array.is_array "$array_name" || return 2
+    array.is_array "$array_name" || return 2 # O3
 
-    local rval_ref=$(bash.generate_variable "rval")
-    array.get_values "$array_name" "$rval_ref"
+    local rval_ref=$(bash.generate_variable "rval") # O1
+    array.get_values "$array_name" "$rval_ref" # O4
 
     while read -r line; do
         [[ "$line" == "$val" ]] && return 0
@@ -170,15 +195,16 @@ function array.contains_value {
 #     3 if <array> is set, but not an array.                                   #
 #     4 if <array> is unset.                                                   #
 # Order:                                                                       #
+#     6                                                                        #
 # ============================================================================ #
 function array.delete_by_key {
     local array_name="${1:?"No array_name to 'array.delete_by_key'!"}"
     local key="${2:?"No key to 'array.delete_by_key'!"}"
 
-    bash.is_var_set "$array_name" || return 4
-    array.is_array "$array_name" || return 3
-    bash.is_var_ro "$array_name" && return 2
-    array.contains_key "$array_name" "$key" || return 1
+    bash.is_var_set "$array_name" || return 4 # O1
+    array.is_array "$array_name" || return 3  # O3
+    bash.is_var_ro "$array_name" && return 2  # O3
+    array.contains_key "$array_name" "$key" || return 1 # O5
 
     unset "$array_name[$key]"
     eval "$array_name=(\"\${$array_name[@]}\")"
@@ -197,25 +223,26 @@ function array.delete_by_key {
 #     3 if <array> is set, but not an array.                                   #
 #     4 if <array> is unset.                                                   #
 # Order:                                                                       #
+#     7                                                                        #
 # ============================================================================ #
 function array.delete_by_value {
     local array_name="${1:?"No array_name to 'array.delete_by_value'!"}"
     local val="${2:?"No value to 'array.delete_by_value'!"}"
 
-    bash.is_var_set "$array_name" || return 4 
-    array.is_array "$array_name" || return 3
-    bash.is_var_ro "$array_name" && return 2
+    bash.is_var_set "$array_name" || return 4  # O1
+    array.is_array "$array_name" || return 3   # O3
+    bash.is_var_ro "$array_name" && return 2   # O3
 
-    local rval_ref1=$(bash.generate_variable "rval")
-    array.get_keys "$array_name" "$rval_ref1"
+    local rval_ref1=$(bash.generate_variable "rval") # O1
+    array.get_keys "$array_name" "$rval_ref1" # O4
 
-    local rval_ref2=$(bash.generate_variable "rval")
+    local rval_ref2=$(bash.generate_variable "rval") # O1
     
 
     local val_found=0
     local arraystring=""
     while read -r key; do
-        array.get_by_key "$array_name" "$key" "$rval_ref2"
+        array.get_by_key "$array_name" "$key" "$rval_ref2" # O6
         if [[ "${!rval_ref2}" == "$val" ]]; then
             val_found=1
         else
@@ -239,14 +266,15 @@ function array.delete_by_value {
 #     0 if successful                                                          #
 #     1 if <array_name> is not an array                                        #
 # Order:                                                                       #
+#     5                                                                        #
 # ============================================================================ #
 function array.dump_keys {
     local array_name="${1:?"No array to 'array.dump_keys'!"}"
 
-    array.is_array "$array_name" || return 1
+    array.is_array "$array_name" || return 1 # O3
 
-    local rval_ref=$(bash.generate_variable "rval")
-    array.get_keys "$array_name" "$rval_ref"
+    local rval_ref=$(bash.generate_variable "rval") # O1
+    array.get_keys "$array_name" "$rval_ref" # O4
 
     while read -r el; do
         printf "%s\n" "$el"
@@ -262,14 +290,15 @@ function array.dump_keys {
 #     0 if successful                                                          #
 #     1 if <array_name> is not an array                                        #
 # Order:                                                                       #
+#     5                                                                        #
 # ============================================================================ #
 function array.dump_values {
     local array_name="${1:?"No array_name provided to 'array.dump_values'!"}"
 
-    array.is_array "$array_name" || return 1
+    array.is_array "$array_name" || return 1 # O3
 
-    local rval_ref=$(bash.generate_variable "rval")
-    array.get_values "$array_name" "$rval_ref"
+    local rval_ref=$(bash.generate_variable "rval") # O1
+    array.get_values "$array_name" "$rval_ref" # O4
 
     while read -r el; do
         printf "%s\n" "$el"
@@ -286,18 +315,18 @@ function array.dump_values {
 #     1 if <array_name> did not contain <key>                                  #
 #     2 if <array_name> is not an array                                        #
 # Order:                                                                       #
+#     6                                                                        #
 # ============================================================================ #
 function array.get_by_key {
     local array_name="${1:?"No array_name provided to 'array.get_by_key'!"}"
     local key="${2:?"No key provided to 'array.get_by_key'!"}"
     local __retval="${3:?"No retval variable provided!"}"
     
-    array.is_array "$array_name" || return 2
-    array.contains_key "$array_name" "$key" || return 1
+    array.is_array "$array_name" || return 2 # O3
+    array.contains_key "$array_name" "$key" || return 1 # O5
     
     local tmp="$array_name[\"$key\"]"
     eval "$__retval=\"${!tmp}\""
-    
 }
 
 # ================ Function: array.get_by_value ============================== #
@@ -310,23 +339,24 @@ function array.get_by_key {
 #     1 if no keys index the specified <value>                                 #
 #     2 if <array_name> is not an array                                        #
 # Order:                                                                       #
+#     7                                                                        #
 # ============================================================================ #
 function array.get_by_value {
     local array_name="${1:?"No array_name provided to 'array.get_by_value'!"}"
     local value="${2:?"No value provided to 'array.get_by_value'!"}"
     local rval_name="${3:?"No rval provided!"}"
     
-    array.is_array "$array_name" || return 2
-    array.contains_value "$array_name" "$value" || return 1
+    array.is_array "$array_name" || return 2 # O3
+    array.contains_value "$array_name" "$value" || return 1 # O5
 
-    local rval_ref1=$(bash.generate_variable "rval")
-    array.get_keys "$array_name" "$rval_ref1"
+    local rval_ref1=$(bash.generate_variable "rval") # O1
+    array.get_keys "$array_name" "$rval_ref1" # O4
 
-    local rval_ref2=$(bash.generate_variable "rval")
+    local rval_ref2=$(bash.generate_variable "rval") # O1
 
     local val_found=0
     while read -r key; do
-        array.get_by_key "$array_name" "$key" "$rval_ref2"
+        array.get_by_key "$array_name" "$key" "$rval_ref2" # O6
         if [[ "${!rval_ref2}" == "$value" ]]; then
             if [[ $val_found -eq 0 ]]; then
                 unset "$rval_name"
@@ -339,7 +369,6 @@ function array.get_by_value {
     done <<< "${!rval_ref1}"
     
     [[ "$val_found" -eq 1 ]]
-
 }
 
 # ================ Function: array.get_keys ================================== #
@@ -347,11 +376,12 @@ function array.get_by_value {
 #     Return all keys from <array>                                             #
 #     Keys are returned as a newline separated list                            #
 # Usage:                                                                       #
-#     array.get_keys <array>                                                   #
+#     array.get_keys <array> <rval>                                            #
 # Return Codes:                                                                #
 #     0 if successful                                                          #
 #     1 if <array_name> is not an array                                        #
 # Order:                                                                       #
+#     4                                                                        #
 # ============================================================================ #
 function array.get_keys {
     local array_name="${1:?"No array to 'array.get_keys'!"}"
@@ -377,6 +407,7 @@ function array.get_keys {
 #     0 if successful                                                          #
 #     1 if <array_name> is not an array                                        #
 # Order:                                                                       #
+#     4                                                                        #
 # ============================================================================ #
 function array.get_values {
     local array_name="${1:?"Usage: array.get_values <array>"}"
@@ -412,13 +443,14 @@ function array.is_array {
 
 # ================ Function: array.is_associative ============================ #
 # Description:                                                                 #
-#     Check if an array is associative                                         #
+#     Check if an array variable is an associative array                       #
 # Usage:                                                                       #
 #     array.is_associative <array>                                             #
 # Return Codes:                                                                #
 #     0 if <var> is an associative array                                       #
 #     1 if <var> is not an associative array                                   #
 # Order:                                                                       #
+#     3                                                                        #
 # ============================================================================ #
 function array.is_associative {
     local array_name="${1:?"Usage: array.is_associative <array>"}"
@@ -426,17 +458,19 @@ function array.is_associative {
 }
 
 # ================ Function: array.is_standard =============================== #
-# Description:
-# Usage: is_array_standard <var>                                               #
+# Description:                                                                 #
+#     Check if an array variable is a standard array                           #
+# Usage:                                                                       #
+#     array.is_standard <array>                                                #
 # Return Codes:                                                                #
 #     0 if <var> is a standard array                                           #
 #     1 if <var> is not a standard array                                       #
-#     2 if <var> is invalid                                                    #
-# Order:
+# Order:                                                                       #
+#     3                                                                        #
 # ============================================================================ #
 function array.is_standard {
-    local aname="${1:?""}"    
-    bash.var_contains_attr "$aname" "a" && return 0 || return 1
+    local __array="${1:?"Missing array parameter to ${FUNCNAME[0]}"}"    
+    bash.var_contains_attr "$__array" "a" || return 1
 }
 
 # ================ Function: array.join ====================================== #
@@ -449,30 +483,31 @@ function array.is_standard {
 #     2 if <array_name2> is not an array.                                      #
 #     1 if array types do not match.                                           #
 # Order:                                                                       #
+#     7                                                                        #
 # ============================================================================ #
 function array.join {
     local array_name1="${1:?"No array1 to 'join_arrays'!"}"
     local array_name2="${2:?"No array2 to 'join_arrays'!"}"
 
-    array.is_array "$array_name1" || return 3
-    array.is_array "$array_name2" || return 2
+    array.is_array "$array_name1" || return 3 # O3
+    array.is_array "$array_name2" || return 2 # O3
 
-    array.is_standard "$array_name1" && array.is_standard "$array_name2" && local mode="standard"
-    array.is_associative "$array_name1" && array.is_associative "$array_name2" && local mode="associative"
+    array.is_standard "$array_name1" && array.is_standard "$array_name2" && local mode="standard" # O3
+    array.is_associative "$array_name1" && array.is_associative "$array_name2" && local mode="associative" # O3
 
     [[ "$mode" != "standard" && "$mode" != "associative" ]] && return 1
 
-    local rval_ref=$(bash.generate_variable "rval")
+    local rval_ref=$(bash.generate_variable "rval") # O1
     if [[ "$mode" == "standard" ]]; then
-        array.get_values "$array_name1" "$rval_ref"
+        array.get_values "$array_name1" "$rval_ref" # O4
         while read -r el; do
-            array.push "$array_name2" "$el"
+            array.push "$array_name2" "$el" # O4
         done <<< "${!rval_ref}"
     elif [[ "$mode" == "associative" ]]; then
-        array.get_keys "$array_name1" "$rval_ref"
+        array.get_keys "$array_name1" "$rval_ref" # O4
         while read -r key; do
-            array.get_by_key "$array_name1" "$key" "$rval_ref"
-            array.set_element "$array_name2" "$key" "${!rval_ref}"
+            array.get_by_key "$array_name1" "$key" "$rval_ref" # O6
+            array.set_element "$array_name2" "$key" "${!rval_ref}" # O1
         done <<< "${!rval_ref}"
     fi
 }
@@ -486,12 +521,13 @@ function array.join {
 #     0 if the array length is returned successfully                           #
 #     1 if <array_name> is not an array                                        #
 # Order:                                                                       #
+#     4                                                                        #
 # ============================================================================ #
 function array.len {
     local array_name="${1:?"No array provided!"}"
     local __rval="${2:?"No rval provided!"}"
 
-    array.is_array "$array_name" || return 1
+    array.is_array "$array_name" || return 1 # O3
     eval "$__rval=\${#$array_name[@]}"
 }
 
@@ -502,24 +538,25 @@ function array.len {
 # Usage:                                                                       #
 #     array.pop <array> <rval>                                                 #
 # Return Codes:                                                                #
-# Order:
+# Order:                                                                       #
+#     7                                                                        #
 # ============================================================================ #
 function array.pop {
     local array_name="${1:?"No array provided!"}"
     local popval="${2:?"No popval provided!"}"
 
-    array.is_array "$array_name" || return 2
-    array.is_standard "$array_name" || return 1
+    array.is_array "$array_name" || return 2 # O3
+    array.is_standard "$array_name" || return 1 # O3
 
-    local rval_ref=$(bash.generate_variable "rval")
-    array.len "$array_name" "$rval_ref"
+    local rval_ref=$(bash.generate_variable "rval") # O1
+    array.len "$array_name" "$rval_ref" # O4
     local last_key=$(( ${!rval_ref} - 1 ))
 
-    array.get_by_key "$array_name" $last_key "$rval_ref"
+    array.get_by_key "$array_name" $last_key "$rval_ref" # O6
 
     eval "$popval=${!rval_ref}"
 
-    array.delete_by_key "$array_name" $last_key
+    array.delete_by_key "$array_name" $last_key # O6
 }
 
 
@@ -534,15 +571,16 @@ function array.pop {
 #     1 if <aname> is an associative array.                                    #
 #     0 if <el> was successfully pushed to array <aname>.                      #
 # Order:                                                                       #
+#     4                                                                        #
 # ============================================================================ #
 function array.push {
     local aname="${1:?"Usage: array.push <array> <el>"}"
     local el="${2:?"No element to 'add_array_element'!"}"
 
-    array.is_array "$aname" || return 2
-    array.is_standard "$aname" || return 1
+    array.is_array "$aname" || return 2 # O3
+    array.is_standard "$aname" || return 1 # O3
 
-    string.contains "$el" $'\n'
+    string.contains "$el" $'\n' # O1
     if [[ $? -eq 0 ]]; then
         while read -r s_el; do
             array.push "$aname" "$s_el"
@@ -557,19 +595,21 @@ function array.push {
 #     Remove duplicate values from an array                                    #
 # Usage:                                                                       #
 #     remove_array_duplicates <array>                                          #
-# Return Codes:
+# Return Codes:                                                                #
 # Order:
+#     6                                                                        #
 # ============================================================================ #
 function array.remove_duplicates {
     local array_name="${1:?"No array to 'remove_array_duplicates'!"}"
-    array.is_array "$array_name" || return 1
+    array.is_standard "$array_name" || return 1
 
     local -a tmparray
 
-    array.get_values "$array_name" "vals"
+    local rval_ref="$(bash.generate_variable "rval")" # O1
+    array.get_values "$array_name" "$rval_ref" # O4
     while read -r el; do
-        array.contains_value "tmparray" "$el" || array.push "tmparray" "$el"
-    done <<< "$vals"
+        array.contains_value "tmparray" "$el" || array.push "tmparray" "$el" # O5/O4
+    done <<< "${!rval_ref}"
 
     eval "$array_name=(\"\${tmparray[@]}\")"
 }
@@ -581,38 +621,139 @@ function array.remove_duplicates {
 # Usage:                                                                       #
 #     array.add_element <array> <key> <value>                                  #
 # Return Codes:                                                                #
-#     0 if                                                                     #
-#     1 if                                                                     #
+#     0 if key:value element was set properly                                  #
+#     1 if __array references a standard array, but key is not an integer      #
+#     2 if __array does not reference an array variable                        #
 # Order:                                                                       #
+#     1                                                                        #
 # ============================================================================ #
 function array.set_element {
     local array_name="${1:?""}"
     local key="${2:?""}"
     local value="${3:?""}"
+
+    array.is_array "$array_name" || return 2
+
+    array.is_standard "$array_name"
+    if [[ $? -eq 0 ]]; then
+        string.is_int "$key" || return 1
+    fi
+
     eval "$array_name[\"$key\"]=\"$value\""
 }
 
+# ================ Function: array.sort ====================================== #
+# ============================================================================ #
+function array.sort {
+    local __array="${1:?"No array provided!"}"
+    local __dir="${2:?"No direction provided!"}"
+    local __mode="${3:?"No mode provided!"}"
+
+    array.is_standard "$__array" || return 3
+    [[ "$__dir" != "ascend" && "$__dir" != "descend" ]] && return 2
+    [[ "$__mode" != "num" && "$__mode" != "alpha" ]] && return 1
+
+    local -a tmparray
+
+    local rval_len_orig="$(bash.generate_variable "rval")"
+    array.len "$__array" "$rval_len_orig"
+    local rval_len="$(bash.generate_variable "rval")"
+    
+    for ((i=0; i<${!rval_len_orig}; i++)); do
+        local first_val=1
+        local save=""
+        local save_index=0
+
+        
+        array.len "$__array" "$rval_len"
+
+        for (( j=0; j<${!rval_len}; j++)); do
+            local rval="$(bash.generate_variable "rval")"
+            array.get_by_key "$__array" $j "$rval"
+            if [[ $first_val -eq 1 ]]; then
+                first_val=0
+                save="${!rval}"
+                save_index=$j
+            fi
+
+            if [[ "$__mode" == "num" ]]; then
+                if [[ "$__dir" == "ascend" ]]; then
+                    if [[ ${!rval} -lt $save ]]; then
+                        save=${!rval}
+                        save_index=$j
+                    fi
+                elif [[ "$__dir" == "descend" ]]; then
+                    if [[ ${!rval} -gt $save ]]; then
+                        save=${!rval}
+                        save_index=$j
+                    fi
+                fi
+            elif [[ "$__mode" == "alpha" ]]; then
+                if [[ "$__dir" == "ascend" ]]; then
+                    if [[ "${!rval}" < "$save" ]]; then
+                        save="${!rval}"
+                        save_index=$j
+                    fi
+                elif [[ "$__dir" == "descend" ]]; then
+                    if [[ "${!rval}" > "$save" ]]; then
+                        save="${!rval}"
+                        save_index=$j
+                    fi
+                fi
+            fi
+        done
+
+        array.push "tmparray" "$save"
+        array.delete_by_key "$__array" $save_index
+
+    done
+
+
+    eval "$__array=(\"\${tmparray[@]}\")"
+}
+
 # ================ Function: array.split ===================================== #
-# Description:
+# Description:                                                                 #
 # Usage:
 # Return Codes:
 # Order:
 # ============================================================================ #
 function array.split {
+    local __array1="${1:?""}"
+    local __index="${2:?""}"
+    local __array2="${3:?""}"
+
+    array.is_array "$__array1" || return 1
+    array.is_standard "$__array1" || return 1
+    bash.is_int "$__index" || return 1
 :
 }
 
 # ================ Function: bash.generate_variable ========================== #
-# Description:
-# Usage:
-# Return Codes:
-# Order:
+# Description:                                                                 #
+#     Return dynamically generated variable string with supplied prefix        #
+# Usage:                                                                       #
+#     bash.generate_variable <prefix>                                          #
+# Return Codes:                                                                #
+# Order:                                                                       #
+#     1                                                                        #
 # ============================================================================ #
 function bash.generate_variable {
     local prefix="${1:?"No prefix provided!"}"
     local highest="$(declare -p | grep "$prefix" | awk -F'[ =]+' '{print $3}' | grep -Po "(?<=$prefix)[0-9]+" | sort -n | tail -n 1)"
     declare -g "$prefix$highest"
     printf "$prefix$(( $highest + 1 ))"
+}
+
+# ================ Function: bash.is_int ===================================== #
+# Description:                                                                 #
+# Usage:                                                                       #
+# Return Codes:                                                                #
+# Order:                                                                       #
+# ============================================================================ #
+function bash.is_int {
+    local __var="${1:?""}"
+    bash.var_contains_attr "$__var" "i" || return 1
 }
 
 
@@ -935,6 +1076,7 @@ function string.colorize {
 # Usage:                                                                       #
 # Return Codes:                                                                #
 # Order:
+#     1                                                                        #
 # ============================================================================ #
 function string.contains {
     local str1="${1:?""}"
@@ -961,6 +1103,17 @@ function string.is_alpha {
 # ============================================================================ #
 function string.is_alphanum {
     [[ "${1:?'Usage: is_alphanum <string>'}" =~ ^[0-9a-zA-Z]+$ ]]
+}
+
+# ================ Function: string.is_int =================================== #
+# Description:                                                                 #
+# Usage:                                                                       #
+# Return Codes:                                                                #
+# Order:                                                                       #
+# ============================================================================ #
+function string.is_int {
+    local __var="${1:?""}"
+    [[ "$__var" =~ ^[0-9]+$ ]]
 }
 
 

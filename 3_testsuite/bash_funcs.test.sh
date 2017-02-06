@@ -75,6 +75,23 @@ function execute_tests {
 # ============================================================================ #
 # ================ Test Functions ============================================ #
 
+function array.array_from_list.test {
+
+    local -a array1=("el1" "el2")
+    list+="apple"$'\n'
+    list+="orange"$'\n'
+    list+="banana"$'\n'
+    list+="blue blueberry"
+
+    array.array_from_list "array1" "list";  check_fail 1
+    array.array_from_list "array2" "list";  check_pass
+
+    array.contains_value "array2" "apple";  check_pass
+    array.contains_value "array2" "orange"; check_pass
+    array.contains_value "array2" "banana"; check_pass
+    array.contains_value "array2" "blue blueberry"; check_pass
+}
+
 function array.contains_element.test {
 
     local i=0
@@ -117,7 +134,7 @@ function array.contains_value.test {
     local -a array1=("val1")
     local i=1
 
-    array.contains_value "arrayBogus" "val1"; check_fail 3
+    array.contains_value "arrayBogus" "val1"; check_fail 2
     array.contains_value "i" "val1";          check_fail 2
     array.contains_value "array1" "val2";     check_fail 1
     array.contains_value "array1" "val1";     check_pass
@@ -257,7 +274,7 @@ function array.get_keys.test {
     [[ "$keys" == "el 3"$'\n'"el 2"$'\n'"el 1" ]]; check_pass  # Order is NOT guaranteed!
 }
 
-function arrray.get_values.test {
+function array.get_values.test {
 
     local i=0
     local -a array1=("el1" "el2" "el2")
@@ -411,13 +428,55 @@ function array.push.test {
 function array.remove_duplicates.test {
 
     local -a array1=(0 1 2 3 3 3 4 4 4 5 6 7 7 7 7 7 7 7 7 8 8 9)
+    local -A array2=(["k1"]="a" ["k2"]="b")
 
     array.remove_duplicates "arrayBogus";            check_fail 1
+    array.remove_duplicates "array2";                check_fail 1
     array.remove_duplicates "array1";                check_pass
 
     array.len "array1" "len";                        check_pass
     [[ $len -eq 10 ]];                               check_pass
 }
+
+
+function array.set_element.test {
+
+    local -a array1
+    local -A array2
+
+    array.set_element "arrayBogus" "key" "val";      check_fail 2
+    array.set_element "array1" "key" "val";          check_fail 1
+
+    array.set_element "array1" "0" "val";            check_pass
+    array.contains_element "array1" "0" "val";       check_pass
+
+    array.set_element "array2" "key" "val";          check_pass
+    array.contains_element "array2" "key" "val";     check_pass
+}
+
+function array.sort.test {
+
+
+    local -A array1=(["a"]="This" ["b"]="is a" ["c"]="test.")
+    local -a array2=(1 3 7 2 8 6 4 )
+
+    array.sort "array1" "ascend" "num";     check_fail 3
+    array.sort "array2" "blah" "num";       check_fail 2
+    array.sort "array2" "ascend" "blah";    check_fail 1
+
+
+    array.sort "array2" "ascend" "num";     check_pass
+    local sorted_vals="$(array.dump_values "array2")"; check_pass
+    local test_string="1"$'\n'"2"$'\n'"3"$'\n'"4"$'\n'"6"$'\n'"7"$'\n'"8"
+    [[ "$sorted_vals" == "$test_string" ]];   check_pass
+
+    array.sort "array2" "descend" "num";    check_pass
+    sorted_vals="$(array.dump_values "array2")";       check_pass
+    test_string="8"$'\n'"7"$'\n'"6"$'\n'"4"$'\n'"3"$'\n'"2"$'\n'"1"
+    [[ "$sorted_vals" == "$test_string" ]];   check_pass
+
+}
+
 
 function bash.is_var_ro.test {
 
