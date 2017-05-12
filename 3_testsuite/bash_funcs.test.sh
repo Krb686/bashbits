@@ -1,5 +1,6 @@
 #!/bin/bash
 
+clear
 dir="$(readlink -f "$(dirname $0)")"
 . "$dir/bash_funcs.sh"
 
@@ -85,7 +86,6 @@ function array.array_from_list.test {
 
     array.array_from_list "array1" "list";  check_fail 1
     array.array_from_list "array2" "list";  check_pass
-
     array.contains_value "array2" "apple";  check_pass
     array.contains_value "array2" "orange"; check_pass
     array.contains_value "array2" "banana"; check_pass
@@ -150,7 +150,7 @@ function array.delete_by_key.test {
 
     array.delete_by_key "arrayBogus" "k1";    check_fail 4 # Should return 4 if array param is not set.
     array.delete_by_key "i" "k1";             check_fail 3 # Should return 3 if array param is not an array.
-    array.delete_by_key "array3" "k1";        check_fail 2 # Should return 2 if array param is readonly.
+    array.delete_by_key "array3" "0";         check_fail 2 # Should return 2 if array param is readonly.
     array.delete_by_key "array2" "k2";        check_fail 1 # Should return 1 if array did not contain specified key.
     array.delete_by_key "array2" "k1";        check_pass
     array.contains_key  "array2" "k1";        check_fail 1
@@ -441,8 +441,8 @@ function array.remove_duplicates.test {
 
 function array.set_element.test {
 
-    local -a array1
-    local -A array2
+    local -a array1=()
+    local -A array2=()
 
     array.set_element "arrayBogus" "key" "val";      check_fail 2
     array.set_element "array1" "key" "val";          check_fail 1
@@ -464,12 +464,12 @@ function array.sort.test {
     array.sort "array2" "blah" "num";       check_fail 2
     array.sort "array2" "ascend" "blah";    check_fail 1
 
-
     array.sort "array2" "ascend" "num";     check_pass
     local sorted_vals="$(array.dump_values "array2")"; check_pass
     local test_string="1"$'\n'"2"$'\n'"3"$'\n'"4"$'\n'"6"$'\n'"7"$'\n'"8"
     [[ "$sorted_vals" == "$test_string" ]];   check_pass
 
+    DBG=1
     array.sort "array2" "descend" "num";    check_pass
     sorted_vals="$(array.dump_values "array2")";       check_pass
     test_string="8"$'\n'"7"$'\n'"6"$'\n'"4"$'\n'"3"$'\n'"2"$'\n'"1"
@@ -486,6 +486,7 @@ function bash.is_var_ro.test {
     bash.is_var_ro "var1";    check_fail 2
     bash.is_var_ro "var2";    check_fail 1
     bash.is_var_ro "var3";    check_pass
+    #declare -p
 }
 
 parse_test_funcs

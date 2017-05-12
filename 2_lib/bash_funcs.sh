@@ -3,6 +3,8 @@
 # ======== Function Descriptions ======== #
 # array
 #     - array.array_from_list           Create a new array from a newline separated list of values
+#     - array.clear                     Clear an array of all elements
+#     - array.compress                  Compress down array elements
 #     - array.contains_element          Check if an array contains a key - value pair
 #     - array.contains_key		Check if an array contains a key
 #     - array.contains_value		Check if an array contains a value
@@ -51,6 +53,7 @@
 #     - string.contains
 #     - string.is_alpha
 #     - string.is_alphanum
+#     - string.is_ip
 #     - string.is_num
 # tree
 #     - tree.add_node
@@ -102,6 +105,33 @@ function array.array_from_list {
     done <<< "${!__list_name}"
 }
 
+# ================ Function: array.clear ===================================== #
+# ============================================================================ #
+function array.clear {
+    local __array="${1:?"No array provided!"}"
+    eval "$__array=()"
+}
+
+# ================ Function: array.compress ================================== #
+# ============================================================================ #
+function array.compress {
+    local __array="${1:?"No array name provided!"}"
+
+    array.is_array "$__array" || return 2
+    array.is_standard "$__array" || return 1
+
+    local rval="$(bash.alloc)"
+    array.get_values "$__array" "$rval"
+    array.clear "$__array"
+
+    local ctr=0
+    while read -r el; do
+        array.push "$__array" "$el"
+    done <<< "${!rval}"
+    unset ${!rval}
+
+}
+
 # ================ Function: array.contains_element ========================== #
 # Description:                                                                 #
 #     Check if an array contains an element (key-value pair)                   #
@@ -122,7 +152,7 @@ function array.contains_element {
     array.is_array "$array_name" || return 2 # O3
     array.contains_key "$array_name" "$key" || return 1 # O5
 
-    local rval_ref=$(bash.generate_variable "rval") # O1
+    local rval_ref=$(bash.alloc) # O1
     array.get_by_key "$array_name" "$key" "$rval_ref" # O6
     [[ "${!rval_ref}" == "$val" ]] && return 0 || return 1
 }
@@ -145,7 +175,7 @@ function array.contains_key {
 
     array.is_array "$array_name" || return 2  # O3
 
-    local rval_ref=$(bash.generate_variable "rval") # O1
+    local rval_ref=$(bash.alloc) # O1
     array.get_keys "$array_name" "$rval_ref" # O4
 
     while read -r el; do
@@ -172,7 +202,7 @@ function array.contains_value {
 
     array.is_array "$array_name" || return 2 # O3
 
-    local rval_ref=$(bash.generate_variable "rval") # O1
+    local rval_ref=$(bash.alloc) # O1
     array.get_values "$array_name" "$rval_ref" # O4
 
     while read -r line; do
@@ -206,7 +236,21 @@ function array.delete_by_key {
     array.contains_key "$array_name" "$key" || return 1 # O5
 
     unset "$array_name[$key]"
-    eval "$array_name=(\"\${$array_name[@]}\")"
+
+    #local rval_ref=$(bash.alloc)
+    #array.len "$array_name" "$rval_ref"
+
+    #if [[ ${!rval_ref} -ne 0 ]]; then
+    #    eval "$array_name=(\"\$(printf \"%s\n\" \"\${$array_name[@]}\")\")"
+    #fi
+
+    return 0
+    #local array_content="$(printf "%s\n" "$")"
+    #if [[ "$array_content" == "" ]]; then
+    #    eval "$array_name=()"
+    #else
+    #    eval "$array_name=($array_content)"
+    #fi
 
 }
 
@@ -232,10 +276,10 @@ function array.delete_by_value {
     array.is_array "$array_name" || return 3   # O3
     bash.is_var_ro "$array_name" && return 2   # O3
 
-    local rval_ref1=$(bash.generate_variable "rval") # O1
+    local rval_ref1=$(bash.alloc) # O1
     array.get_keys "$array_name" "$rval_ref1" # O4
 
-    local rval_ref2=$(bash.generate_variable "rval") # O1
+    local rval_ref2=$(bash.alloc) # O1
     
 
     local val_found=0
@@ -272,7 +316,7 @@ function array.dump_keys {
 
     array.is_array "$array_name" || return 1 # O3
 
-    local rval_ref=$(bash.generate_variable "rval") # O1
+    local rval_ref=$(bash.alloc) # O1
     array.get_keys "$array_name" "$rval_ref" # O4
 
     while read -r el; do
@@ -296,7 +340,7 @@ function array.dump_values {
 
     array.is_array "$array_name" || return 1 # O3
 
-    local rval_ref=$(bash.generate_variable "rval") # O1
+    local rval_ref=$(bash.alloc) # O1
     array.get_values "$array_name" "$rval_ref" # O4
 
     while read -r el; do
@@ -348,10 +392,10 @@ function array.get_by_value {
     array.is_array "$array_name" || return 2 # O3
     array.contains_value "$array_name" "$value" || return 1 # O5
 
-    local rval_ref1=$(bash.generate_variable "rval") # O1
+    local rval_ref1=$(bash.alloc) # O1
     array.get_keys "$array_name" "$rval_ref1" # O4
 
-    local rval_ref2=$(bash.generate_variable "rval") # O1
+    local rval_ref2=$(bash.alloc) # O1
 
     local val_found=0
     while read -r key; do
@@ -496,7 +540,7 @@ function array.join {
 
     [[ "$mode" != "standard" && "$mode" != "associative" ]] && return 1
 
-    local rval_ref=$(bash.generate_variable "rval") # O1
+    local rval_ref=$(bash.alloc) # O1
     if [[ "$mode" == "standard" ]]; then
         array.get_values "$array_name1" "$rval_ref" # O4
         while read -r el; do
@@ -547,7 +591,7 @@ function array.pop {
     array.is_array "$array_name" || return 2 # O3
     array.is_standard "$array_name" || return 1 # O3
 
-    local rval_ref=$(bash.generate_variable "rval") # O1
+    local rval_ref=$(bash.alloc) # O1
     array.len "$array_name" "$rval_ref" # O4
     local last_key=$(( ${!rval_ref} - 1 ))
 
@@ -602,9 +646,8 @@ function array.remove_duplicates {
     local array_name="${1:?"No array to 'remove_array_duplicates'!"}"
     array.is_standard "$array_name" || return 1
 
-    local -a tmparray
-
-    local rval_ref="$(bash.generate_variable "rval")" # O1
+    local -a tmparray=()
+    local rval_ref="$(bash.alloc)" # O1
     array.get_values "$array_name" "$rval_ref" # O4
     while read -r el; do
         array.contains_value "tmparray" "$el" || array.push "tmparray" "$el" # O5/O4
@@ -662,59 +705,56 @@ function array.sort {
     [[ "$__dir" != "ascend" && "$__dir" != "descend" ]] && return 2
     [[ "$__mode" != "num" && "$__mode" != "alpha" ]] && return 1
 
-    local -a tmparray
+    local -a tmparray=()
 
-    local rval_len_orig="$(bash.generate_variable "rval")"
-    array.len "$__array" "$rval_len_orig"
-    local rval_len="$(bash.generate_variable "rval")"
-    
-    for ((i=0; i<${!rval_len_orig}; i++)); do
-        local first_val=1
-        local save=""
-        local save_index=0
+    local rval_len="$(bash.alloc)"
+    array.len "$__array" "$rval_len"
+   
+    local ref
+    local ref_index
+   
+     
+    # outer loop - loop until original array length is 0
+    while [[ ${!rval_len} -gt 0 ]]; do
+        array.get_by_key "$__array" 0 "ref"
+        ref_index=0
 
-        
-        array.len "$__array" "$rval_len"
-
-        for (( j=0; j<${!rval_len}; j++)); do
-            local rval="$(bash.generate_variable "rval")"
-            array.get_by_key "$__array" $j "$rval"
-            if [[ $first_val -eq 1 ]]; then
-                first_val=0
-                save="${!rval}"
-                save_index=$j
-            fi
+	# inner loop - each iteration of the outer loop, 
+        for (( i=0; i<${!rval_len}; i++)); do
+            local rval="$(bash.alloc)"
+            array.get_by_key "$__array" $i "$rval"
 
             if [[ "$__mode" == "num" ]]; then
                 if [[ "$__dir" == "ascend" ]]; then
-                    if [[ ${!rval} -lt $save ]]; then
-                        save=${!rval}
-                        save_index=$j
+                    if [[ ${!rval} -lt $ref ]]; then
+                        ref=${!rval}
+                        ref_index=$i
                     fi
                 elif [[ "$__dir" == "descend" ]]; then
-                    if [[ ${!rval} -gt $save ]]; then
-                        save=${!rval}
-                        save_index=$j
+                    if [[ ${!rval} -gt $ref ]]; then
+                        ref=${!rval}
+                        ref_index=$i
                     fi
                 fi
             elif [[ "$__mode" == "alpha" ]]; then
                 if [[ "$__dir" == "ascend" ]]; then
-                    if [[ "${!rval}" < "$save" ]]; then
-                        save="${!rval}"
-                        save_index=$j
+                    if [[ "${!rval}" < "$ref" ]]; then
+                        ref="${!rval}"
+                        ref_index=$i
                     fi
                 elif [[ "$__dir" == "descend" ]]; then
-                    if [[ "${!rval}" > "$save" ]]; then
-                        save="${!rval}"
-                        save_index=$j
+                    if [[ "${!rval}" > "$ref" ]]; then
+                        ref="${!rval}"
+                        ref_index=$i
                     fi
                 fi
             fi
         done
 
-        array.push "tmparray" "$save"
-        array.delete_by_key "$__array" $save_index
-
+        array.push "tmparray" "$ref"
+        array.delete_by_key "$__array" $ref_index
+        array.len "$__array" "$rval_len"
+	[[ ${!rval_len} -gt 0 ]] && array.compress "$__array"
     done
 
 
@@ -738,17 +778,24 @@ function array.split {
 :
 }
 
-# ================ Function: bash.generate_variable ========================== #
+# ================ Function: bash.free_variables ============================= #
+# ============================================================================ #
+function bash.free_variables {
+:
+}
+
+# ================ Function: bash.alloc ========================== #
 # Description:                                                                 #
 #     Return dynamically generated variable string with supplied prefix        #
 # Usage:                                                                       #
-#     bash.generate_variable <prefix>                                          #
+#     bash.alloc <prefix>                                          #
 # Return Codes:                                                                #
 # Order:                                                                       #
 #     1                                                                        #
 # ============================================================================ #
-function bash.generate_variable {
-    local prefix="${1:?"No prefix provided!"}"
+function bash.alloc {
+    echo "${FUNCNAME[0]}"
+    exit 0
     local highest="$(declare -p | grep "$prefix" | awk -F'[ =]+' '{print $3}' | grep -Po "(?<=$prefix)[0-9]+" | sort -n | tail -n 1)"
     declare -g "$prefix$highest"
     printf "$prefix$(( $highest + 1 ))"
@@ -796,6 +843,7 @@ function bash.is_var_ro {
     bash.var_contains_attr "$var" "r"
 }
 
+
 # ================ Function: bash.is_var_set ================================= #
 # Description:                                                                 #
 #     Determine if a name is a set (initialized) variable.                     #
@@ -807,10 +855,18 @@ function bash.is_var_ro {
 # Order:                                                                       #
 #     1                                                                        #
 # ============================================================================ #
+if [[ "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -eq 3 && "${BASH_VERSINFO[2]}" -eq 11 ]]; then
+function bash.is_var_set {
+    local var="${1:?"No var to 'bash.is_var_set'!"}"
+    [[ $DBG -eq 1 ]] && declare -p
+    declare -p | grep -Poq "declare [a-zA-Z-]+ $var"
+}
+else
 function bash.is_var_set {
     local var="${1:?"No var to 'bash.is_var_set'!"}"
     [[ -v "$var" ]] && return 0 || return 1
 }
+fi
 
 # ================ Function: bash.var_contains_attr ========================== #
 # Description:                                                                 #
@@ -829,6 +885,7 @@ function bash.var_contains_attr {
     local attr="${2:?"No attr to 'var_contains_attr'!"}"
 
     bash.is_var_set "$var" || return 2
+
     local str="$(declare -p "$var")"
     str="${str#* }"
     str="${str%% *}"
@@ -916,9 +973,7 @@ function exec.exec_locked {
 # Order:
 # ============================================================================ #
 function exec.get_caller {
-    if [[ $? -eq 1 ]]; then
-        echo "Failure at ${BASH_SOURCE[2]}, line ${BASH_LINENO[1]}"
-    fi
+    echo "${FUNCNAME[@]}" 
 }
 
 # ================ exec.is_call_internal ===================================== #
@@ -940,6 +995,14 @@ function exec.is_call_internal {
 # ============================================================================ #
 function exec.is_locked {
 :
+}
+
+# ================ Function: exec.print_exit_line ============================ #
+# ============================================================================ #
+function exec.print_exit_line {
+    if [[ $? -eq 1 ]]; then
+        echo "Failure at ${BASH_SOURCE[2]}, line ${BASH_LINENO[1]}"
+    fi
 }
 
 # ================ Function: file.despace_name =============================== #
@@ -1123,6 +1186,16 @@ function string.is_alphanum {
 function string.is_int {
     local __var="${1:?""}"
     [[ "$__var" =~ ^[0-9]+$ ]]
+}
+
+# ================ Function: string.is_ip ==================================== #
+# Description:                                                                 #
+# Usage:                                                                       #
+# Return Codes:                                                                #
+# Order:                                                                       #
+# ============================================================================ #
+function string.is_ip {
+    [[ "$(echo "${1:?"Usage: string.is_ip <string>"}" | grep -Po '^([0-9]+.){3}([0-9]+){1}$')" != "" ]]
 }
 
 
@@ -1336,10 +1409,15 @@ function yum.update_repo {
 :
 }
 
+# Notes
+#
+# Format for variable generation
+# local rval_ref=$(bash.alloc)
+
 
 # Common setup
 # Make sure 'LOG_FD' is not in use
 [[ -n ${LOG_FD+x} ]] && printf "%s\n" "DO NOT use variable 'LOG_FD', as your values will be overwritten! This variable is reserved!"
 exec {LOG_FD}>&1
 
-trap exec.get_caller EXIT
+trap exec.print_exit_line EXIT
