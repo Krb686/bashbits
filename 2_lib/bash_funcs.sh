@@ -27,6 +27,8 @@
 #     - array.set_element		Set an element of an array, by specifying key and value
 #     - array.sort                      Sort an array in ascending or descending order, numerically or alphabetically
 # bash
+#     - bash.alloc
+#     - bash.free
 #     - bash.requires
 #     - bash.is_var_ro
 #     - bash.is_var_set
@@ -128,7 +130,7 @@ function array.compress {
     while read -r el; do
         array.push "$__array" "$el"
     done <<< "${!rval}"
-    unset ${!rval}
+    bash.free && unset $rval
 
 }
 
@@ -148,13 +150,15 @@ function array.contains_element {
     local array_name="${1:?"Usage: array.contains_element <array> <key> <value>"}"
     local key="${2:?"No key provided!"}"
     local val="${3:?"No val provided!"}"
+    local rc=0
 
     array.is_array "$array_name" || return 2 # O3
     array.contains_key "$array_name" "$key" || return 1 # O5
 
     local rval_ref=$(bash.alloc) # O1
     array.get_by_key "$array_name" "$key" "$rval_ref" # O6
-    [[ "${!rval_ref}" == "$val" ]] && return 0 || return 1
+    [[ "${!rval_ref}" == "$val" ]] && rc=0 || rc=1
+    bash.free && return $rc
 }
 
 # ================ Function: array.contains_key ============================== #
@@ -172,6 +176,7 @@ function array.contains_element {
 function array.contains_key {
     local array_name="${1:?"No array_name to 'array.contains_key'!"}"
     local key="${2:?"No key to 'array.contains_key'!"}"
+    local rc=1
 
     array.is_array "$array_name" || return 2  # O3
 
@@ -179,9 +184,9 @@ function array.contains_key {
     array.get_keys "$array_name" "$rval_ref" # O4
 
     while read -r el; do
-        [[ "$el" == "$key" ]] && return 0
+        [[ "$el" == "$key" ]] && rc=0
     done <<< "${!rval_ref}"
-    return 1
+    bash.free && return $rc
 }
 
 # ================ Function: array.contains_value ============================ #
@@ -199,16 +204,16 @@ function array.contains_key {
 function array.contains_value {
     local array_name="${1:?"No array_name to 'array.contains_value'!"}"
     local val="${2:?"No value to 'array.contains_value'!"}"
+    local rc=1
 
     array.is_array "$array_name" || return 2 # O3
 
     local rval_ref=$(bash.alloc) # O1
     array.get_values "$array_name" "$rval_ref" # O4
-
     while read -r line; do
-        [[ "$line" == "$val" ]] && return 0
+        [[ "$line" == "$val" ]] && rc=0
     done <<< "${!rval_ref}"
-    return 1
+    bash.free && return $rc
 }
 
 # ================ Function: array.delete_by_key ============================= #
@@ -236,22 +241,7 @@ function array.delete_by_key {
     array.contains_key "$array_name" "$key" || return 1 # O5
 
     unset "$array_name[$key]"
-
-    #local rval_ref=$(bash.alloc)
-    #array.len "$array_name" "$rval_ref"
-
-    #if [[ ${!rval_ref} -ne 0 ]]; then
-    #    eval "$array_name=(\"\$(printf \"%s\n\" \"\${$array_name[@]}\")\")"
-    #fi
-
     return 0
-    #local array_content="$(printf "%s\n" "$")"
-    #if [[ "$array_content" == "" ]]; then
-    #    eval "$array_name=()"
-    #else
-    #    eval "$array_name=($array_content)"
-    #fi
-
 }
 
 # ================ Function: array.delete_by_value =========================== #
@@ -271,6 +261,7 @@ function array.delete_by_key {
 function array.delete_by_value {
     local array_name="${1:?"No array_name to 'array.delete_by_value'!"}"
     local val="${2:?"No value to 'array.delete_by_value'!"}"
+    local rc=1
 
     bash.is_var_set "$array_name" || return 4  # O1
     array.is_array "$array_name" || return 3   # O3
@@ -294,10 +285,9 @@ function array.delete_by_value {
     done <<< "${!rval_ref1}"
 
     if [[ $val_found -eq 1 ]]; then
-        eval "$array_name=($arraystring)"
-    else
-        return 1
+        eval "$array_name=($arraystring)" && rc=0
     fi
+    bash.free 2 && return $rc
 }
 
 # ================ Function: array.dump_keys ================================= #
@@ -322,6 +312,7 @@ function array.dump_keys {
     while read -r el; do
         printf "%s\n" "$el"
     done <<< "${!rval_ref}"
+    bash.free
 }
 
 # ================ Function: array.dump_values =============================== #
@@ -346,6 +337,7 @@ function array.dump_values {
     while read -r el; do
         printf "%s\n" "$el"
     done <<< "${!rval_ref}"
+    bash.free
 }
 
 # ================ Function: array.get_by_key ================================ #
@@ -388,6 +380,7 @@ function array.get_by_value {
     local array_name="${1:?"No array_name provided to 'array.get_by_value'!"}"
     local value="${2:?"No value provided to 'array.get_by_value'!"}"
     local rval_name="${3:?"No rval provided!"}"
+    local rc=1
     
     array.is_array "$array_name" || return 2 # O3
     array.contains_value "$array_name" "$value" || return 1 # O5
@@ -411,7 +404,8 @@ function array.get_by_value {
         fi
     done <<< "${!rval_ref1}"
     
-    [[ "$val_found" -eq 1 ]]
+    [[ "$val_found" -eq 1 ]] && rc=0
+    bash.free 2 && return $rc
 }
 
 # ================ Function: array.get_keys ================================== #
@@ -553,6 +547,7 @@ function array.join {
             array.set_element "$array_name2" "$key" "${!rval_ref}" # O1
         done <<< "${!rval_ref}"
     fi
+    bash.free
 }
 
 # ================ Function: array.len ======================================= #
@@ -600,6 +595,7 @@ function array.pop {
     eval "$popval=${!rval_ref}"
 
     array.delete_by_key "$array_name" $last_key # O6
+    bash.free
 }
 
 
@@ -652,8 +648,8 @@ function array.remove_duplicates {
     while read -r el; do
         array.contains_value "tmparray" "$el" || array.push "tmparray" "$el" # O5/O4
     done <<< "${!rval_ref}"
-
     eval "$array_name=(\"\${tmparray[@]}\")"
+    bash.free
 }
 
 
@@ -700,6 +696,7 @@ function array.sort {
     local __array="${1:?"No array provided!"}"
     local __dir="${2:?"No direction provided!"}"
     local __mode="${3:?"No mode provided!"}"
+    local alloc_count=0
 
     array.is_standard "$__array" || return 3
     [[ "$__dir" != "ascend" && "$__dir" != "descend" ]] && return 2
@@ -707,7 +704,7 @@ function array.sort {
 
     local -a tmparray=()
 
-    local rval_len="$(bash.alloc)"
+    local rval_len="$(bash.alloc)" && alloc_count=$(( $alloc_count +1 ))
     array.len "$__array" "$rval_len"
    
     local ref
@@ -721,7 +718,7 @@ function array.sort {
 
 	# inner loop - each iteration of the outer loop, 
         for (( i=0; i<${!rval_len}; i++)); do
-            local rval="$(bash.alloc)"
+            local rval="$(bash.alloc)" && alloc_count=$(( $alloc_count + 1 ))
             array.get_by_key "$__array" $i "$rval"
 
             if [[ "$__mode" == "num" ]]; then
@@ -756,9 +753,8 @@ function array.sort {
         array.len "$__array" "$rval_len"
 	[[ ${!rval_len} -gt 0 ]] && array.compress "$__array"
     done
-
-
     eval "$__array=(\"\${tmparray[@]}\")"
+    bash.free $alloc_count
 }
 
 # ================ Function: array.split ===================================== #
@@ -778,11 +774,7 @@ function array.split {
 :
 }
 
-# ================ Function: bash.free_variables ============================= #
-# ============================================================================ #
-function bash.free_variables {
-:
-}
+
 
 # ================ Function: bash.alloc ========================== #
 # Description:                                                                 #
@@ -794,11 +786,25 @@ function bash.free_variables {
 #     1                                                                        #
 # ============================================================================ #
 function bash.alloc {
-    echo "${FUNCNAME[0]}"
-    exit 0
+    local prefix="${FUNCNAME[1]}"
+    prefix="${prefix/./_}"
     local highest="$(declare -p | grep "$prefix" | awk -F'[ =]+' '{print $3}' | grep -Po "(?<=$prefix)[0-9]+" | sort -n | tail -n 1)"
     declare -g "$prefix$highest"
     printf "$prefix$(( $highest + 1 ))"
+}
+
+# ================ Function: bash.free_variables ============================= #
+# ============================================================================ #
+function bash.free {
+    local num="${1:-1}"
+    local prefix="${FUNCNAME[1]}"
+    prefix="${prefix/./_}"
+
+    while [[ $num -gt 0 ]]; do
+        local highest="$(declare -p | grep "$prefix" | awk -F'[ =]+' '{print $3}' | grep -Po "(?<=$prefix)[0-9]+" | sort -n | tail -n 1)"
+        unset "${prefix}${highest}"
+        num=$(( $num - 1 ))
+    done
 }
 
 # ================ Function: bash.is_int ===================================== #
