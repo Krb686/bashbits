@@ -108,9 +108,17 @@ function array.array_from_list {
 }
 
 # ================ Function: array.clear ===================================== #
+# Description:                                                                 #
+#     Clear an array of all elements                                           #
+# Usage:                                                                       #
+#     array.clear <array>                                                      #
+# Return Codes:                                                                #
+#     0 if array was cleared successfully                                      #
+#     1 if argument was not an array                                           #
 # ============================================================================ #
 function array.clear {
     local __array="${1:?"No array provided!"}"
+    array.is_array "$__array" || return 1
     eval "$__array=()"
 }
 

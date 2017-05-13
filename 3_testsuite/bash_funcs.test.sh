@@ -92,6 +92,22 @@ function array.array_from_list.test {
     array.contains_value "array2" "blue blueberry"; check_pass
 }
 
+function array.clear.test {
+    local i=0
+    local -a array1=(1 2 3 4 5)
+    local -A array2=(["a"]="1" ["b"]="2" ["c"]="3")
+    local len
+
+    array.clear "i";          check_fail 1
+    array.clear "array1";     check_pass 
+    array.len "array1" "len"
+    [[ $len -eq 0 ]];         check_pass
+
+    array.clear "array2"
+    array.len "array2" "len"
+    [[ $len -eq 0 ]];         check_pass
+}
+
 function array.contains_element.test {
 
     local i=0
