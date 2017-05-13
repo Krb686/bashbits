@@ -153,7 +153,7 @@ function parse_loop {
 	    :
 	else
 	    array.push "__state_array" "$__next_state"
-	    array.dump "__state_array"
+	    array.dump_values "__state_array"
             print.debug "change state --> $__next_state"
             __next_state=""
 	fi
