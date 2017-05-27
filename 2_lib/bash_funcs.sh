@@ -298,6 +298,28 @@ function array.delete_by_value {
     bash.free 2 && return $rc
 }
 
+# ================ Function: array.drop ====================================== #
+# Description:                                                                 #
+#     Remove the last element from a standard array                            #
+# Usage:                                                                       #
+#     array.drop <array>                                                       #
+# Return Codes:                                                                #
+# Order:                                                                       #
+#     7                                                                        #
+# ============================================================================ #
+function array.drop {
+    local array_name="${1:?"No array provided!"}"
+
+    array.is_array "$array_name" || return 2 # O3
+    array.is_standard "$array_name" || return 1 # O3
+
+    local rval_ref=$(bash.alloc) # O1
+    array.len "$array_name" "$rval_ref" # O4
+    local last_key=$(( ${!rval_ref} - 1 ))
+    array.delete_by_key "$array_name" $last_key # O6
+    bash.free
+}
+
 # ================ Function: array.dump_keys ================================= #
 # Description:                                                                 #
 #     Dump array keys to stdout.                                               #
