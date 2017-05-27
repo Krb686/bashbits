@@ -433,11 +433,16 @@ function array.get_keys {
     local __rval="${2:?"No rval name provided!"}"
 
     array.is_array "$array_name" || return 1
-
-    local OIFS="$IFS"
-    IFS=$'\n'
-    eval "$__rval=\"\${!$array_name[*]}\""
-    IFS="$OIFS"
+    local rval="$(bash.alloc)"
+    array.len "$array_name" "$rval"
+    if [[ ${!rval} -eq 0 ]]; then
+        eval "$__rval=\"\""
+    else
+        local OIFS="$IFS"
+        IFS=$'\n'
+        eval "$__rval=\"\${!$array_name[*]}\""
+        IFS="$OIFS"
+    fi
 }
 
 
@@ -459,11 +464,16 @@ function array.get_values {
     local __rval="${2:?"No rval name provided!"}"
 
     array.is_array "$array_name" || return 1
-
-    local OIFS="$IFS"
-    IFS=$'\n'
-    eval "$__rval=\"\${$array_name[*]}\""
-    IFS="$OIFS"
+    local rval="$(bash.alloc)"
+    array.len "$array_name" "$rval"
+    if [[ ${!rval} -eq 0 ]]; then
+        eval "$__rval=\"\""
+    else
+        local OIFS="$IFS" # save the original ifs
+        IFS=$'\n'
+        eval "$__rval=\"\${$array_name[*]}\""
+        IFS="$OIFS"
+    fi
 }
 
 # ================ Function: array.is_array ================================== #
