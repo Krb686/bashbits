@@ -135,6 +135,7 @@ function parse_loop {
                 [[ $char == '!' ]] && __next_state="history-expansion"
                 [[ $char == '(' ]] && __next_state="command-subshell-list"
                 [[ $char == '{' ]] && __next_state="command-group"
+                [[ $char == '}' ]] && { __next_state="previous"; previous=4; }
                 [[ $char == '[' ]] && __next_state="test"
                 echo $char | grep -Pq '[a-zA-Z0-9_]' && __next_state="declaration"
                 ;;
@@ -154,18 +155,23 @@ function parse_loop {
             "declaration")
                 [[ $char == "=" ]] && { __next_state="declaration-variable"; declaration_text=""; }
                 if [[ $char == " " ]]; then
+                    echo "decl_text = $declaration_text"
                     [[ $declaration_text == "function" ]] && { __next_state="declaration-function"; declaration_text=""; continue; }
                     [[ $declaration_text != "function" ]] && { __next_state="declaration-command"; declaration_text=""; continue; }
                 fi
+                [[ $char == $'\n' ]] && { __next_state="previous"; previous=1; declaration_text=""; }
                 ;;
             "declaration-command")
                 [[ $char == $'\n' ]] && { __next_state="previous"; previous=2; }
                 ;;
             "declaration-function")
-                [[ $char == $'\n' ]] && __next_state="function-body"
+                [[ $char == '{' ]] && __next_state="function-body"
                 ;;
             "declaration-variable")
                 [[ $char == " " || $char == $'\n' ]]   && { __next_state="previous"; previous=2; }
+                ;;
+            "function-body")
+                [[ $char == $'\n' ]] && __next_state="normal"
                 ;;
             "parameter-expansion-simple")
                 echo $char | grep -q ' ' && { __next_state="previous"; previous=2; }
@@ -188,7 +194,6 @@ function parse_loop {
     # assign the new state
     if [[ "$__next_state" != "" ]]; then
 	if [[ "$__next_state" == "previous" ]]; then
-            print.debug "----------------"
             print.debug "l: $LINE - $__state ----> $__next_state"
             
 
@@ -199,7 +204,6 @@ function parse_loop {
             array.len "__state_array" "len"
             __state="${__state_array[$(($len-1))]}"
             __next_state=""
-            array.dump_values "__state_array"
 	else
             # Output from previous capture
             if [[ "$__state" == "comment" ]]; then
@@ -215,7 +219,6 @@ function parse_loop {
                 CAPTURE+="#"
             fi
 
-            print.debug "----------------"
             print.debug "l: $LINE - $__state ----> $__next_state"
             
 	    array.push "__state_array" "$__next_state"
@@ -223,7 +226,6 @@ function parse_loop {
 	    #array.dump_values "__state_array"
             __state=$__next_state
             __next_state=""
-            array.dump_values "__state_array"
 
 	fi
     fi
@@ -241,7 +243,7 @@ function parse_loop {
     fi
 
     # special exit
-    [[ $LINE -eq 42 ]] && exit 0
+    [[ $LINE -eq 72 ]] && exit 0
 
     done <<< "$(<$TARGET)"
 }
