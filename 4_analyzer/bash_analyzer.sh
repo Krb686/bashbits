@@ -185,6 +185,9 @@ function parse_loop {
            "string-double")
                echo $char | grep -q $'"' && { __next_state="previous"; previous=1; }
                 ;;
+           "test")
+               [[ $char == ']' ]] && { __next_state="previous"; previous=2; }
+               ;;
         esac
 
 
@@ -243,7 +246,7 @@ function parse_loop {
     fi
 
     # special exit
-    [[ $LINE -eq 72 ]] && exit 0
+    [[ $LINE -eq 250 ]] && exit 0
 
     done <<< "$(<$TARGET)"
 }
