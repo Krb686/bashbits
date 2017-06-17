@@ -33,6 +33,7 @@ function init {
     declare -a __commands=()
     declare -a __controls=()
     declare -a __comments=()
+    declare -a __comments_meta=()
     
     # Variables
     INFO_FLAG=1
@@ -52,12 +53,15 @@ function init {
     declare -A __vars
     declare -A __vars_scope
     declare -a __state_array=( $__state )
+    START=""
+    END=""
     STR=
     STRING=
     COMMENT=
     STR_ESCAPE="off"
     QUOTE_CHECK="off"
     CAPTURE=""
+    SKIP=0
     LINE=1
     
     STATE_LVL=-1
@@ -78,6 +82,7 @@ function init {
     arg_handler "$@"
 
     main
+    report_comments
 }
 
 
@@ -87,14 +92,28 @@ function arg_handler {
     if [[ $# -eq 0 ]]; then
         exit "$EXIT_BAD_ARGS"
     else
-        case "$1" in
-            "--target")
-                TARGET="${2:?"No target specified!"}"
-                shift 2;;
-            *)
-                exit "$EXIT_BAD_ARGS";;
-        esac
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                "--target")
+                    TARGET="${2:?"No target specified!"}"
+                    shift 2;;
+                "--start")
+                    START="${2:?"No START line specified!"}" && shift 2
+                    echo "$START"
+                    string.is_num "$START" || exit "$EXIT_BAD_ARGS";;
+                "--end")
+                    END="${2:?"No END line specified!"}" && shift 2
+                    string.is_num "$END" || exit "$EXIT_BAD_ARGS";;
+                *)
+                    exit "$EXIT_BAD_ARGS";;
+            esac
+        done
     fi
+
+    [[ -z "$START" ]] && START=1
+    [[ -z $END     ]] && END=$(get_last_line)
+    print.debug "START = $START"
+    print.debug "END = $END"
 }
 
 
@@ -150,8 +169,15 @@ function parse_loop {
     IFS=
     STR=
     while read -rN1 char; do
-    # State Machine
-    # The next state is a function of the current state and current character
+        if [[ $LINE -lt $START || $LINE -gt $END ]]; then
+            if [[ "$char" == $'\n' ]]; then
+                LINE=$(( $LINE + 1 ))
+                print.debug "line = $LINE"
+            fi
+            continue
+        fi
+        # State Machine
+        # The next state is a function of the current state and current character
         case "$__state" in
             "normal")
                 [[ $char == '#' ]] && __next_state="comment"
@@ -191,7 +217,8 @@ function parse_loop {
                 if [[ $char == $'\n' ]]; then
                     __next_state="previous"
                     previous=1
-                    array.push "__comments" "$CAPTURE"
+                    array.push "__comments"      "$CAPTURE"
+                    array.push "__comments_meta" "$LINE"
                 else
                     CAPTURE+="$char"
                 fi
@@ -207,7 +234,7 @@ function parse_loop {
                      array.push "__variables" "$declaration_text"
                      declaration_text=""
                 elif [[ $char == " " ]]; then
-                    echo "decl_text = $declaration_text"
+                    print.debug "decl_text = $declaration_text"
                     if [[ $declaration_text == "function" ]]; then 
                         __next_state="declaration-function"
                         print.debug "function = $declaration_text"
@@ -225,7 +252,7 @@ function parse_loop {
                 ;;
             "declaration-command")
                 if [[ $__check_declare -eq 1 ]]; then
-                    echo "inside check declare"
+                    print.debug "inside check declare"
                     if [[ $char == $'\n' ]]; then
                         __next_state="previous"
                         previous=2
@@ -233,7 +260,7 @@ function parse_loop {
                     elif grep -Eq '\-|\+' <<< $char; then
                         __next_state="command-opts"
                     elif [[ "$(echo $char | grep -Pq '[a-zA-Z0-9_]')" != "" ]]; then
-                        echo "var after declare!"
+                        print.debug "var after declare!"
                         __check_declare=0
                     fi
                 else
@@ -270,70 +297,81 @@ function parse_loop {
     
 
 
-    # assign the new state
-    if [[ "$__next_state" != "" ]]; then
-	if [[ "$__next_state" == "previous" ]]; then
-            print.debug "l: $LINE - $__state ----> $__next_state"
-            print.debug "CAPTURE = $CAPTURE"            
+        # assign the new state
+        if [[ "$__next_state" != "" ]]; then
+            if [[ "$__next_state" == "previous" ]]; then
+                print.debug "l: $LINE - $__state ----> $__next_state"
+                print.debug "CAPTURE = $CAPTURE"            
 
-            while [[ $previous -gt 0 ]]; do
-                array.drop "__state_array"
-                previous=$(( $previous - 1 ))
-            done
-            array.len "__state_array" "len"
-            __state="${__state_array[$(($len-1))]}"
-            __next_state=""
-        elif [[ "$__next_state" == "previous-normal" ]]; then
-            print.debug "looping back to last 'normal' on state stack"
-            until [[ "$__state" == "normal" ]]; do
-                array.drop "__state_array"
+                while [[ $previous -gt 0 ]]; do
+                    array.drop "__state_array"
+                    previous=$(( $previous - 1 ))
+                done
                 array.len "__state_array" "len"
                 __state="${__state_array[$(($len-1))]}"
-            done
-            print.debug "left at state = $__state" 
-	else
-            # Output from previous capture
-            if [[ "$__state" == "comment" ]]; then
-                CAPTURE="${CAPTURE:0:$(( ${#CAPTURE} - 1 ))}"
-                echo "hi from old code"
-                #echo "L: $LINE - CAPTURE = $CAPTURE"
+                __next_state=""
+            elif [[ "$__next_state" == "previous-normal" ]]; then
+                print.debug "looping back to last 'normal' on state stack"
+                until [[ "$__state" == "normal" ]]; do
+                    array.drop "__state_array"
+                    array.len "__state_array" "len"
+                    __state="${__state_array[$(($len-1))]}"
+                done
+                print.debug "left at state = $__state" 
+            else
+                # Output from previous capture
+                if [[ "$__state" == "comment" ]]; then
+                    CAPTURE="${CAPTURE:0:$(( ${#CAPTURE} - 1 ))}"
+                    echo "hi from old code"
+                    #echo "L: $LINE - CAPTURE = $CAPTURE"
+                fi
+
+                # Reset capture
+                CAPTURE=""
+
+                # Setup before next capture
+                if [[ "$__next_state" == "comment" ]]; then
+                    CAPTURE+="#"
+                fi
+
+                print.debug "l: $LINE - $__state ----> $__next_state"
+                
+                array.push "__state_array" "$__next_state"
+
+                #array.dump_values "__state_array"
+                __state=$__next_state
+                __next_state=""
+
             fi
-
-            # Reset capture
-            CAPTURE=""
-
-            # Setup before next capture
-            if [[ "$__next_state" == "comment" ]]; then
-                CAPTURE+="#"
-            fi
-
-            print.debug "l: $LINE - $__state ----> $__next_state"
-            
-	    array.push "__state_array" "$__next_state"
-
-	    #array.dump_values "__state_array"
-            __state=$__next_state
-            __next_state=""
-
-	fi
-    fi
+        fi
 
 
-    case "$__state" in
-        "declaration")
-            declaration_text+=$char
-            ;;
+        case "$__state" in
+            "declaration")
+                declaration_text+=$char
+                ;;
 
-    esac
+        esac
 
-    if [[ "$char" == $'\n' ]]; then
-        LINE=$(( $LINE + 1 ))
-    fi
+        if [[ "$char" == $'\n' ]]; then
+            LINE=$(( $LINE + 1 ))
+            print.debug "line = $LINE"
+        fi
 
-    # special exit
-    [[ $LINE -eq 70 ]] && exit 0
+        # special exit
+        #[[ $LINE -eq 150 ]] && exit 0
 
     done <<< "$(<$TARGET)"
+}
+
+function report_comments {
+    for ((i=0;i<${#__comments[@]};i++)); do
+        echo "${__comments_meta[$i]}: ${__comments[$i]}"
+    done
+}
+
+function get_last_line {
+    cat "$TARGET" | wc -l
 }
 
 init "$@"
