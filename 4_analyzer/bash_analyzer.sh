@@ -1,4 +1,27 @@
 #!/bin/bash
+# Goals
+# - code flow
+# - check variable reference validity
+#   - know variable scope
+#   - know variable 1st reference
+#   - know variable declaration
+# - dependencies (list builtin and external command calls)
+# - code optimization
+# - dynamic command dependency checking with traps
+
+# ---- Objects ---- #
+# - variables
+# - functions
+# - commands
+#   - command
+#   - args
+# - control flow
+# - comments
+declare -a __variables=()
+declare -a __functions=()
+declare -a __commands=()
+declare -a __controls=()
+declare -a __comments=()
 
 # Variables
 INFO_FLAG=1
@@ -12,8 +35,11 @@ DUMP_STRINGS=1
 # ------------
 BUILD_STR=1
 LINENUM=1
+__check_declare=0
 __state="normal"
 __next_state=""
+declare -A __vars
+declare -A __vars_scope
 declare -a __state_array=( $__state )
 STR=
 STRING=
@@ -146,23 +172,71 @@ function parse_loop {
                 echo $char | grep -q $'\'' && __next_state="string-ansi"
                 echo $char | grep -Pq '[a-zA-Z_]' && { __next_state="parameter-expansion-simple"; }
                 ;;
+            "command-opts")
+                if [[ $char == $'\n' ]]; then
+                    __next_state="previous-normal"
+                    CAPTURE=""
+                elif [[ $char == " " ]]; then
+                    print.debug "OPT: $CAPTURE"
+                    CAPTURE=""
+                else
+                    CAPTURE+="$char"
+                fi 
+                ;;
             "command-subshell-list")
                 echo $char | grep -q $'\n' && { __next_state="previous"; previous=1; };;
             "comment")
-                CAPTURE+="$char"
-                [[ $char == $'\n' ]] && { __next_state="previous"; previous=1; }
+                if [[ $char == $'\n' ]]; then
+                    __next_state="previous"
+                    previous=1
+                    array.push "__comments" "$CAPTURE"
+                else
+                    CAPTURE+="$char"
+                fi
                 ;;
+            # A declaration can be:
+            # - defining a variable
+            # - defining or calling a function
+            # - calling a command
             "declaration")
-                [[ $char == "=" ]] && { __next_state="declaration-variable"; declaration_text=""; }
-                if [[ $char == " " ]]; then
+                if [[ $char == "=" ]]; then
+                     __next_state="declaration-variable"
+                     print.debug "variable = $declaration_text"
+                     array.push "__variables" "$declaration_text"
+                     declaration_text=""
+                elif [[ $char == " " ]]; then
                     echo "decl_text = $declaration_text"
-                    [[ $declaration_text == "function" ]] && { __next_state="declaration-function"; declaration_text=""; continue; }
-                    [[ $declaration_text != "function" ]] && { __next_state="declaration-command"; declaration_text=""; continue; }
+                    if [[ $declaration_text == "function" ]]; then 
+                        __next_state="declaration-function"
+                        print.debug "function = $declaration_text"
+                        array.push "__functions" "$declaration_text"
+                    else
+                        __next_state="declaration-command"
+
+                        if [[ "$declaration_text" == "declare" ]]; then
+                            __check_declare=1
+                        fi
+                    fi
+                    declaration_text=""
                 fi
                 [[ $char == $'\n' ]] && { __next_state="previous"; previous=1; declaration_text=""; }
                 ;;
             "declaration-command")
-                [[ $char == $'\n' ]] && { __next_state="previous"; previous=2; }
+                if [[ $__check_declare -eq 1 ]]; then
+                    echo "inside check declare"
+                    if [[ $char == $'\n' ]]; then
+                        __next_state="previous"
+                        previous=2
+                       __check_declare=0
+                    elif grep -Eq '\-|\+' <<< $char; then
+                        __next_state="command-opts"
+                    elif [[ "$(echo $char | grep -Pq '[a-zA-Z0-9_]')" != "" ]]; then
+                        echo "var after declare!"
+                        __check_declare=0
+                    fi
+                else
+                    [[ $char == $'\n' ]] && { __next_state="previous"; previous=2; }
+                fi
                 ;;
             "declaration-function")
                 [[ $char == '{' ]] && __next_state="function-body"
@@ -198,7 +272,7 @@ function parse_loop {
     if [[ "$__next_state" != "" ]]; then
 	if [[ "$__next_state" == "previous" ]]; then
             print.debug "l: $LINE - $__state ----> $__next_state"
-            
+            print.debug "CAPTURE = $CAPTURE"            
 
             while [[ $previous -gt 0 ]]; do
                 array.drop "__state_array"
@@ -207,10 +281,19 @@ function parse_loop {
             array.len "__state_array" "len"
             __state="${__state_array[$(($len-1))]}"
             __next_state=""
+        elif [[ "$__next_state" == "previous-normal" ]]; then
+            print.debug "looping back to last 'normal' on state stack"
+            until [[ "$__state" == "normal" ]]; do
+                array.drop "__state_array"
+                array.len "__state_array" "len"
+                __state="${__state_array[$(($len-1))]}"
+            done
+            print.debug "left at state = $__state" 
 	else
             # Output from previous capture
             if [[ "$__state" == "comment" ]]; then
                 CAPTURE="${CAPTURE:0:$(( ${#CAPTURE} - 1 ))}"
+                echo "hi from old code"
                 #echo "L: $LINE - CAPTURE = $CAPTURE"
             fi
 
@@ -246,7 +329,7 @@ function parse_loop {
     fi
 
     # special exit
-    [[ $LINE -eq 250 ]] && exit 0
+    [[ $LINE -eq 70 ]] && exit 0
 
     done <<< "$(<$TARGET)"
 }

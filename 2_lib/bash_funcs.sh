@@ -662,7 +662,7 @@ function array.push {
     string.contains "$el" $'\n' # O1
     if [[ $? -eq 0 ]]; then
         while read -r s_el; do
-            array.push "$aname" "$s_el"
+            [[ -n "$s_el" ]] && array.push "$aname" "$s_el"
         done <<< "$el"
     else
         eval "$aname+=(\""$el"\")"
