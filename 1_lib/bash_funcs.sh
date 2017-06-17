@@ -665,7 +665,7 @@ function array.push {
             [[ -n "$s_el" ]] && array.push "$aname" "$s_el"
         done <<< "$el"
     else
-        eval "$aname+=(\""$el"\")"
+        eval "$aname+=('"$el"')"
     fi
 }
 

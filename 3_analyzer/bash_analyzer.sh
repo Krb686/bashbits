@@ -95,11 +95,9 @@ function arg_handler {
         while [[ $# -gt 0 ]]; do
             case "$1" in
                 "--target")
-                    TARGET="${2:?"No target specified!"}"
-                    shift 2;;
+                    TARGET="${2:?"No target specified!"}" && shift 2;;
                 "--start")
                     START="${2:?"No START line specified!"}" && shift 2
-                    echo "$START"
                     string.is_num "$START" || exit "$EXIT_BAD_ARGS";;
                 "--end")
                     END="${2:?"No END line specified!"}" && shift 2
