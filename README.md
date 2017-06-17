@@ -15,11 +15,11 @@ This repo contains 3 things:
 Current unit test status (bash 4.2.46)
 
 
-[ ------ info ----- ]: Executing tests
-[ ------ info ----- ]: --> array.array_from_list.test
-[ ------ info ----- ]:     --> pass: 6
-[ ------ info ----- ]:     --> fail: 0
-[ ------ info ----- ]: --> array.clear.test
+[ ------ info ----- ]: Executing tests  
+[ ------ info ----- ]: --> array.array_from_list.test  
+[ ------ info ----- ]:     --> pass: 6  
+[ ------ info ----- ]:     --> fail: 0  
+[ ------ info ----- ]: --> array.clear.test  
 [ ------ info ----- ]:     --> pass: 4
 [ ------ info ----- ]:     --> fail: 0
 [ ------ info ----- ]: --> array.contains_element.test
