@@ -17,49 +17,7 @@
 #   - args
 # - control flow
 # - comments
-declare -a __variables=()
-declare -a __functions=()
-declare -a __commands=()
-declare -a __controls=()
-declare -a __comments=()
 
-# Variables
-INFO_FLAG=1
-ERROR_FLAG=1
-DEBUG_FLAG=1
-
-BASH_FUNCS="bash_funcs.sh"
-
-DUMP_COMMENTS=0
-DUMP_STRINGS=1
-# ------------
-BUILD_STR=1
-LINENUM=1
-__check_declare=0
-__state="normal"
-__next_state=""
-declare -A __vars
-declare -A __vars_scope
-declare -a __state_array=( $__state )
-STR=
-STRING=
-COMMENT=
-STR_ESCAPE="off"
-QUOTE_CHECK="off"
-CAPTURE=""
-LINE=1
-
-STATE_LVL=-1
-STATE_EXIT_CHECK="off"
-QUOTE_TRACKER=()
-
-
-# Exit codes
-EXIT_NO_BASH_FUNCS=1
-EXIT_BAD_ARGS=2
-
-
-declaration_text=""
 
 # ================ Function: init ================ #
 # ================================================ #
@@ -69,6 +27,50 @@ function init {
 
     # Setup exit trap
     trap exit EXIT
+
+    declare -a __variables=()
+    declare -a __functions=()
+    declare -a __commands=()
+    declare -a __controls=()
+    declare -a __comments=()
+    
+    # Variables
+    INFO_FLAG=1
+    ERROR_FLAG=1
+    DEBUG_FLAG=1
+    
+    BASH_FUNCS="bash_funcs.sh"
+    
+    DUMP_COMMENTS=0
+    DUMP_STRINGS=1
+    # ------------
+    BUILD_STR=1
+    LINENUM=1
+    __check_declare=0
+    __state="normal"
+    __next_state=""
+    declare -A __vars
+    declare -A __vars_scope
+    declare -a __state_array=( $__state )
+    STR=
+    STRING=
+    COMMENT=
+    STR_ESCAPE="off"
+    QUOTE_CHECK="off"
+    CAPTURE=""
+    LINE=1
+    
+    STATE_LVL=-1
+    STATE_EXIT_CHECK="off"
+    QUOTE_TRACKER=()
+    
+    
+    # Exit codes
+    EXIT_NO_BASH_FUNCS=1
+    EXIT_BAD_ARGS=2
+    
+    
+    declaration_text=""
 
     # Source bash functions
     . "$BASH_FUNCS" 2>/dev/null || exit $EXIT_NO_BASH_FUNCS
