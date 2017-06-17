@@ -1,4 +1,4 @@
-[3;J[H[2J[ ------ info ----- ]: Executing tests
+[ ------ info ----- ]: Executing tests
 [ ------ info ----- ]: --> array.array_from_list.test
 [ ------ info ----- ]:     --> pass: 6
 [ ------ info ----- ]:     --> fail: 0
