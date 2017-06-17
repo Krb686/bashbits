@@ -1,14 +1,14 @@
 #!/bin/bash
-. "2_lib/bash_funcs.sh"
+. "1_lib/bash_funcs.sh"
 
 
 function list_funcs {
     # Print list of all defined functions
-    cat "2_lib/bash_funcs.sh" | grep -Po '^function.*{$' | awk '{print $2}'
+    cat "1_lib/bash_funcs.sh" | grep -Po '^function.*{$' | awk '{print $2}'
 }
 
 function list_test_funcs {
-    cat "3_testsuite/bash_funcs.test.sh" | grep -Po '^function.*test {$' | awk '{print $2}'
+    cat "2_testsuite/bash_funcs.test.sh" | grep -Po '^function.*test {$' | awk '{print $2}'
 }
 
 function list_test_coverage {
