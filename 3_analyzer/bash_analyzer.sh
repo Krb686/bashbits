@@ -29,6 +29,7 @@ function init {
     trap exit EXIT
 
     declare -a __variables=()
+    declare -a __variables_meta=()
     declare -a __functions=()
     declare -a __commands=()
     declare -a __controls=()
@@ -48,6 +49,7 @@ function init {
     BUILD_STR=1
     LINENUM=1
     __check_declare=0
+    __declare_opt=0
     __state="normal"
     __next_state=""
     declare -A __vars
@@ -82,7 +84,8 @@ function init {
     arg_handler "$@"
 
     main
-    report_comments
+    #report_comments
+    report_variables
 }
 
 
@@ -177,6 +180,13 @@ function parse_loop {
         # State Machine
         # The next state is a function of the current state and current character
         case "$__state" in
+            "ampersand-check")
+               if [[ $char == "&" ]]; then
+                   __next_state="previous-normal"
+               else
+                   __next_state="previous" && previous=1
+               fi
+               ;;
             "normal")
                 [[ $char == '#' ]] && __next_state="comment"
                 [[ $char == '`' ]] && __next_state="command-backtick"
@@ -187,8 +197,8 @@ function parse_loop {
                 [[ $char == '!' ]] && __next_state="history-expansion"
                 [[ $char == '(' ]] && __next_state="command-subshell-list"
                 [[ $char == '{' ]] && __next_state="command-group"
-                [[ $char == '}' ]] && { __next_state="previous"; previous=4; }
-                [[ $char == '[' ]] && __next_state="test"
+                [[ $char == '}' ]] && __next_state="previous"; previous=2
+                [[ $char == '[' ]] && __next_state="test-check"
                 echo $char | grep -Pq '[a-zA-Z0-9_]' && __next_state="declaration"
                 ;;
             "command-backtick")
@@ -200,14 +210,63 @@ function parse_loop {
                 ;;
             "command-opts")
                 if [[ $char == $'\n' ]]; then
+                    print.debug "OPT: $CAPTURE"
                     __next_state="previous-normal"
+
+                    if [[ $__check_declare -eq 1 && $__declare_opt -eq 0 ]]; then
+                        __check_declare=0
+                        print.debug "variable = ${CAPTURE%%=*}"
+                        array.push "__variables"      "${CAPTURE%%=*}"
+                        array.push "__variables_meta" "$LINE"
+                    fi
+                    [[ $__declare_opt -eq 1 ]] && __declare_opt=0
                     CAPTURE=""
                 elif [[ $char == " " ]]; then
+                    echo "got SPACE"
+                    if [[ $__check_declare -eq 1 && $__declare_opt -eq 0 ]]; then
+                        echo "hello"
+                        __check_declare=0
+                        print.debug "variable = ${CAPTURE%%=*}"
+                        array.push "__variables"      "${CAPTURE%%=*}"
+                        array.push "__variables_meta" "$LINE"
+                    fi
                     print.debug "OPT: $CAPTURE"
+                    [[ $__declare_opt -eq 1 ]] && __declare_opt=0
                     CAPTURE=""
+                elif [[ $char == "=" ]]; then
+                    __next_state="command-var"
+                    print.debug "variable = ${CAPTURE%%=*}"
+                    array.push "__variables"      "${CAPTURE%%=*}"
+                    array.push "__variables_meta" "$LINE"
+                    [[ $__check_declare -eq 1 ]] && __check_declare=0
+                elif [[ $char == '"' ]]; then
+                    __next_state="command-arg-string"
+                elif grep -Pq '\-|\+' <<< $char; then
+                    __declare_opt=1
+                elif [[ $char == "|" ]]; then
+                    __next_state="previous-normal"
+                elif [[ $char == "&" ]]; then
+                    __next_state="ampersand-check"
                 else
+                    echo "capturing $char"
                     CAPTURE+="$char"
                 fi 
+                ;;
+            "command-arg-string")
+                if [[ $char == $'\n' ]]; then
+                    __next_state="previous-normal"
+                elif [[ $char == '"' ]]; then
+                    __next_state="previous"
+                    previous=1
+                fi
+                ;;
+            "command-group")
+                [[ $char == ' ' ]] && __next_state="normal"
+                ;;
+            "command-var")
+                if [[ $char == $'\n' ]]; then
+                    __next_state="previous-normal"
+                fi
                 ;;
             "command-subshell-list")
                 echo $char | grep -q $'\n' && { __next_state="previous"; previous=1; };;
@@ -225,11 +284,34 @@ function parse_loop {
             # - defining a variable
             # - defining or calling a function
             # - calling a command
+            "control-case")
+                if [[ $char == $'\n' ]]; then
+                    __next_state="previous-normal"
+                fi
+                ;;
+            "control-for")
+                if [[ $char == $'\n' ]]; then
+                    __next_state="previous-normal"
+                fi
+                ;;
+            "control-if")
+                if [[ $char == $'\n' ]]; then
+                    __next_state="previous-normal"
+                fi
+                ;;
+            "control-until")
+                if [[ $char == $'\n' ]]; then
+                    __next_state="previous-normal"
+                fi
+                ;;
             "declaration")
-                if [[ $char == "=" ]]; then
+                if [[ $char == "+" ]]; then
+                    __next_state="plus-check"
+                elif [[ $char == "=" ]]; then
                      __next_state="declaration-variable"
                      print.debug "variable = $declaration_text"
-                     array.push "__variables" "$declaration_text"
+                     array.push "__variables"      "$declaration_text"
+                     array.push "__variables_meta" "$LINE"
                      declaration_text=""
                 elif [[ $char == " " ]]; then
                     print.debug "decl_text = $declaration_text"
@@ -237,10 +319,18 @@ function parse_loop {
                         __next_state="declaration-function"
                         print.debug "function = $declaration_text"
                         array.push "__functions" "$declaration_text"
+                    elif [[ $declaration_text == "case" ]]; then
+                        __next_state="control-case"
+                    elif [[ $declaration_text =~ "if"|"elif" ]]; then
+                        __next_state="control-if"
+                    elif [[ $declaration_text == "until" ]]; then
+                        __next_state="control-until"
+                    elif [[ $declaration_text == "for" ]]; then
+                        __next_state="control-for"
                     else
-                        __next_state="declaration-command"
+                        __next_state="command-opts"
 
-                        if [[ "$declaration_text" == "declare" ]]; then
+                        if [[ "$declaration_text" =~ "declare"|"typeset"|"local" ]]; then
                             __check_declare=1
                         fi
                     fi
@@ -249,27 +339,13 @@ function parse_loop {
                 [[ $char == $'\n' ]] && { __next_state="previous"; previous=1; declaration_text=""; }
                 ;;
             "declaration-command")
-                if [[ $__check_declare -eq 1 ]]; then
-                    print.debug "inside check declare"
-                    if [[ $char == $'\n' ]]; then
-                        __next_state="previous"
-                        previous=2
-                       __check_declare=0
-                    elif grep -Eq '\-|\+' <<< $char; then
-                        __next_state="command-opts"
-                    elif [[ "$(echo $char | grep -Pq '[a-zA-Z0-9_]')" != "" ]]; then
-                        print.debug "var after declare!"
-                        __check_declare=0
-                    fi
-                else
-                    [[ $char == $'\n' ]] && { __next_state="previous"; previous=2; }
-                fi
+                [[ $char == $'\n' ]] && { __next_state="previous"; previous=2; }
                 ;;
             "declaration-function")
                 [[ $char == '{' ]] && __next_state="function-body"
                 ;;
             "declaration-variable")
-                [[ $char == " " || $char == $'\n' ]]   && { __next_state="previous"; previous=2; }
+                [[ $char == " " || $char == ";" || $char == $'\n' ]] && { __next_state="previous"; previous=2; }
                 ;;
             "function-body")
                 [[ $char == $'\n' ]] && __next_state="normal"
@@ -277,29 +353,47 @@ function parse_loop {
             "parameter-expansion-simple")
                 echo $char | grep -q ' ' && { __next_state="previous"; previous=2; }
                 ;;
+            "plus-check")
+                if [[ $char == "=" ]]; then
+                    __next_state="declaration-variable"
+                    print.debug "variable = $declaration_text"
+                    array.push "__variables"      "$declaration_text"
+                    array.push "__variables_meta" "$LINE"
+                    declaration_text=""
+                elif [[ $char == " " ]]; then
+                    __next_state="previous-normal"
+                else
+                    __next_state="previous" && previous=1
+                fi
+                ;;
             "string-ansi")
                 echo $char | grep -q $'\'' && { __next_state="previous"; previous=2; }
                 ;;
             "string-single")
                 echo $char | grep -q $'\'' && { __next_state="previous"; previous=1; }
                 ;;
-           "string-double")
-               echo $char | grep -q $'"' && { __next_state="previous"; previous=1; }
+            "string-double")
+                echo $char | grep -q $'"' && { __next_state="previous"; previous=1; }
                 ;;
-           "test")
-               [[ $char == ']' ]] && { __next_state="previous"; previous=2; }
-               ;;
+            "test-check")
+                [[ $char == '[' ]] && __next_state="test-double"
+                [[ $char == ' ' ]] && __next_state="test-single"
+                [[ $char == ']' ]] && __next_state="previous"; previous=1
+                ;;
+            "test-single")
+                ;;
+            "test-double")
+                [[ $char == ']' ]] && __next_state="previous"; previous=1
+                [[ $char == "'" ]] && __next_state="string-single"
+                [[ $char == '"' ]] && __next_state="string-double"
+                ;;
         esac
-
-
-    
 
 
         # assign the new state
         if [[ "$__next_state" != "" ]]; then
             if [[ "$__next_state" == "previous" ]]; then
                 print.debug "l: $LINE - $__state ----> $__next_state"
-                print.debug "CAPTURE = $CAPTURE"            
 
                 while [[ $previous -gt 0 ]]; do
                     array.drop "__state_array"
@@ -365,6 +459,12 @@ function parse_loop {
 function report_comments {
     for ((i=0;i<${#__comments[@]};i++)); do
         echo "${__comments_meta[$i]}: ${__comments[$i]}"
+    done
+}
+
+function report_variables {
+    for ((i=0;i<${#__variables[@]};i++)); do
+        echo "${__variables_meta[$i]}: ${__variables[$i]}"
     done
 }
 
