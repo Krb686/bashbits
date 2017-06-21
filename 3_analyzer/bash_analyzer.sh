@@ -8,6 +8,9 @@
 # - dependencies (list builtin and external command calls)
 # - code optimization
 # - dynamic command dependency checking with traps
+# - POSIX compliance
+#   - suggestions to make compliant
+# - bash version requirements
 
 # ---- Objects ---- #
 # - variables
@@ -39,7 +42,7 @@ function init {
     # Variables
     INFO_FLAG=1
     ERROR_FLAG=1
-    DEBUG_FLAG=1
+    DEBUG_FLAG=0
     
     BASH_FUNCS="bash_funcs.sh"
     
@@ -65,6 +68,7 @@ function init {
     CAPTURE=""
     SKIP=0
     LINE=1
+    TARGET=""
     
     STATE_LVL=-1
     STATE_EXIT_CHECK="off"
@@ -74,6 +78,7 @@ function init {
     # Exit codes
     EXIT_NO_BASH_FUNCS=1
     EXIT_BAD_ARGS=2
+    EXIT_NO_TARGET=3
     
     
     declaration_text=""
@@ -86,6 +91,7 @@ function init {
     main
     #report_comments
     report_variables
+    #report_functions
 }
 
 
@@ -111,8 +117,10 @@ function arg_handler {
         done
     fi
 
+    [[ -z "$TARGET" ]] && exit "$EXIT_NO_TARGET"
+    LINE_TOTAL=$(get_last_line)
     [[ -z "$START" ]] && START=1
-    [[ -z $END     ]] && END=$(get_last_line)
+    [[ -z $END     ]] && END=$LINE_TOTAL
     print.debug "START = $START"
     print.debug "END = $END"
 }
@@ -123,6 +131,7 @@ function arg_handler {
 # Main entrypoint                                  #
 # ================================================ #
 function main {
+    
     parse_loop
 }
 
@@ -136,7 +145,11 @@ function exit {
             printf "%s\n" "Bash functions file not found!";;
         "$EXIT_BAD_ARGS")
             print.error "Bad arguments!"
-        print.usage;;
+            print.usage;;
+        "$EXIT_NO_TARGET")
+            print.error "No target specified!"
+            print.usage
+            ;;
     esac
 
     builtin exit "$CODE"
@@ -170,6 +183,8 @@ function parse_loop {
     IFS=
     STR=
     while read -rN1 char; do
+        print.info "l: $LINE/$LINE_TOTAL"
+
         if [[ $LINE -lt $START || $LINE -gt $END ]]; then
             if [[ "$char" == $'\n' ]]; then
                 LINE=$(( $LINE + 1 ))
@@ -215,29 +230,21 @@ function parse_loop {
 
                     if [[ $__check_declare -eq 1 && $__declare_opt -eq 0 ]]; then
                         __check_declare=0
-                        print.debug "variable = ${CAPTURE%%=*}"
-                        array.push "__variables"      "${CAPTURE%%=*}"
-                        array.push "__variables_meta" "$LINE"
+                        add_variable "${CAPTURE%%=*}"
                     fi
                     [[ $__declare_opt -eq 1 ]] && __declare_opt=0
                     CAPTURE=""
                 elif [[ $char == " " ]]; then
-                    echo "got SPACE"
                     if [[ $__check_declare -eq 1 && $__declare_opt -eq 0 ]]; then
-                        echo "hello"
                         __check_declare=0
-                        print.debug "variable = ${CAPTURE%%=*}"
-                        array.push "__variables"      "${CAPTURE%%=*}"
-                        array.push "__variables_meta" "$LINE"
+                        add_variable "${CAPTURE%%=*}"
                     fi
                     print.debug "OPT: $CAPTURE"
                     [[ $__declare_opt -eq 1 ]] && __declare_opt=0
                     CAPTURE=""
                 elif [[ $char == "=" ]]; then
                     __next_state="command-var"
-                    print.debug "variable = ${CAPTURE%%=*}"
-                    array.push "__variables"      "${CAPTURE%%=*}"
-                    array.push "__variables_meta" "$LINE"
+                    add_variable "${CAPTURE%%=*}"
                     [[ $__check_declare -eq 1 ]] && __check_declare=0
                 elif [[ $char == '"' ]]; then
                     __next_state="command-arg-string"
@@ -248,7 +255,6 @@ function parse_loop {
                 elif [[ $char == "&" ]]; then
                     __next_state="ampersand-check"
                 else
-                    echo "capturing $char"
                     CAPTURE+="$char"
                 fi 
                 ;;
@@ -274,8 +280,7 @@ function parse_loop {
                 if [[ $char == $'\n' ]]; then
                     __next_state="previous"
                     previous=1
-                    array.push "__comments"      "$CAPTURE"
-                    array.push "__comments_meta" "$LINE"
+                    add_comment "$CAPTURE"
                 else
                     CAPTURE+="$char"
                 fi
@@ -309,9 +314,7 @@ function parse_loop {
                     __next_state="plus-check"
                 elif [[ $char == "=" ]]; then
                      __next_state="declaration-variable"
-                     print.debug "variable = $declaration_text"
-                     array.push "__variables"      "$declaration_text"
-                     array.push "__variables_meta" "$LINE"
+                     add_variable "$declaration_text"
                      declaration_text=""
                 elif [[ $char == " " ]]; then
                     print.debug "decl_text = $declaration_text"
@@ -356,9 +359,7 @@ function parse_loop {
             "plus-check")
                 if [[ $char == "=" ]]; then
                     __next_state="declaration-variable"
-                    print.debug "variable = $declaration_text"
-                    array.push "__variables"      "$declaration_text"
-                    array.push "__variables_meta" "$LINE"
+                    add_variable "$declaration_text"
                     declaration_text=""
                 elif [[ $char == " " ]]; then
                     __next_state="previous-normal"
@@ -457,12 +458,14 @@ function parse_loop {
 }
 
 function report_comments {
+    echo "-------- Comments --------"
     for ((i=0;i<${#__comments[@]};i++)); do
         echo "${__comments_meta[$i]}: ${__comments[$i]}"
     done
 }
 
 function report_variables {
+    echo "-------- Variables --------"
     for ((i=0;i<${#__variables[@]};i++)); do
         echo "${__variables_meta[$i]}: ${__variables[$i]}"
     done
@@ -471,5 +474,24 @@ function report_variables {
 function get_last_line {
     cat "$TARGET" | wc -l
 }
+
+function report_functions {
+    :
+}
+
+function add_comment {
+    local cmt="${1:?""}"
+    print.debug "comment = $cmt"
+    array.push "__comments" "$cmt"
+    array.push "__comments_meta" "$LINE"
+}
+
+function add_variable {
+    local var="${1:?""}"
+    print.debug "variable = $var"
+    array.push "__variables" "$var"
+    array.push "__variables_meta" "$LINE"
+}
+
 
 init "$@"
