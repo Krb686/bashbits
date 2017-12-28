@@ -34,6 +34,7 @@ function init {
     declare -a __variables=()
     declare -a __variables_meta=()
     declare -a __functions=()
+    declare -a __functions_meta=()
     declare -a __commands=()
     declare -a __controls=()
     declare -a __comments=()
@@ -42,7 +43,7 @@ function init {
     # Variables
     INFO_FLAG=1
     ERROR_FLAG=1
-    DEBUG_FLAG=0
+    DEBUG_FLAG=1
     
     BASH_FUNCS="bash_funcs.sh"
     
@@ -90,8 +91,8 @@ function init {
 
     main
     #report_comments
-    report_variables
-    #report_functions
+    #report_variables
+    report_functions
 }
 
 
@@ -320,8 +321,6 @@ function parse_loop {
                     print.debug "decl_text = $declaration_text"
                     if [[ $declaration_text == "function" ]]; then 
                         __next_state="declaration-function"
-                        print.debug "function = $declaration_text"
-                        array.push "__functions" "$declaration_text"
                     elif [[ $declaration_text == "case" ]]; then
                         __next_state="control-case"
                     elif [[ $declaration_text =~ "if"|"elif" ]]; then
@@ -345,7 +344,12 @@ function parse_loop {
                 [[ $char == $'\n' ]] && { __next_state="previous"; previous=2; }
                 ;;
             "declaration-function")
-                [[ $char == '{' ]] && __next_state="function-body"
+                CAPTURE+=$char
+                if [[ $char == '{' ]]; then
+                    FUNCTION_BODY=1
+                    add_function "$CAPTURE"
+                    __next_state="normal"
+                fi
                 ;;
             "declaration-variable")
                 [[ $char == " " || $char == ";" || $char == $'\n' ]] && { __next_state="previous"; previous=2; }
@@ -401,6 +405,7 @@ function parse_loop {
                     previous=$(( $previous - 1 ))
                 done
                 array.len "__state_array" "len"
+                print.debug "len = $len"
                 __state="${__state_array[$(($len-1))]}"
                 __next_state=""
             elif [[ "$__next_state" == "previous-normal" ]]; then
@@ -464,6 +469,13 @@ function report_comments {
     done
 }
 
+function report_functions {
+    echo "-------- Functions --------"
+    for ((i=0;i<${#__functions[@]};i++)); do
+        echo "${__functions_meta[$i]}: ${__functions[$i]}"
+    done
+}
+
 function report_variables {
     echo "-------- Variables --------"
     for ((i=0;i<${#__variables[@]};i++)); do
@@ -475,15 +487,20 @@ function get_last_line {
     cat "$TARGET" | wc -l
 }
 
-function report_functions {
-    :
-}
+
 
 function add_comment {
     local cmt="${1:?""}"
     print.debug "comment = $cmt"
     array.push "__comments" "$cmt"
     array.push "__comments_meta" "$LINE"
+}
+
+function add_function {
+    local func="${1:?""}"
+    print.debug "function = $func"
+    array.push "__functions" "$func"
+    array.push "__functions_meta" "$LINE"
 }
 
 function add_variable {
