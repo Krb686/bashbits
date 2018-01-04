@@ -17,11 +17,10 @@
 //TODO - pass struct ptr to functions to avoid globals
 //
 //
+//
 
-int state_transitions[1][1] = { 
-    [normal] = { 0 } 
-};
-
+/* ================ Function: main ========================================== */
+/* ========================================================================== */
 int main(int argc, char *argv[]){
     if(argc != 2){
         exit_error(EXIT_BAD_ARGS);
@@ -35,19 +34,32 @@ int main(int argc, char *argv[]){
     return 0;
 }
 
+/* ================ Function: parse_file ==================================== */
+/* ========================================================================== */
 void parse_file(char *filename){
     FILE *fp = fopen(filename, "r");
     if(!fp){
         exit_error(EXIT_BAD_FILENAME);
     }
 
-
+    struct state state = { f_normal, '\0' };
+    while(state.next){
+        if((state.c = fgetc(fp)) != EOF){;
+            state.next(&state);
+            printf("char = %c\n", state.c);
+        } else {
+            break;
+        }
+    }
 }
 
+/* ================ Function: exit_error ==================================== */
+/* ========================================================================== */
 void exit_error(int code){
     switch(code){
     case EXIT_BAD_ARGS:
         printf("Incorrect arguments!\n");
+        usage();
         break;
     case EXIT_BAD_FILENAME:
         printf("Filename is bad or file doesn't exist!\n");
@@ -55,4 +67,10 @@ void exit_error(int code){
     }
 
     exit(code);
+}
+
+/* ================ Function: usage ========================================= */
+/* ========================================================================== */
+void usage(){
+    printf("analyzer <file>\n");
 }

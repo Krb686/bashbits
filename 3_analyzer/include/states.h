@@ -1,33 +1,42 @@
 #ifndef STATES_H
 #define STATES_H
-int f_normal(void);
-int f_command_backtick(void);
-int f_command_expansion_check(void);
-int f_command_opts(void);
-int f_command_arg_string(void);
-int f_command_group(void);
-int f_command_var(void);
-int f_command_subshell_list(void);
-int f_comment(void);
-int f_control_case(void);
-int f_control_for(void);
-int f_control_if(void);
-int f_control_until(void);
-int f_declaration(void);
-int f_declaration_command(void);
-int f_declaration_function(void);
-int f_declaration_variable(void);
-int f_function_body(void);
-int f_parameter_expansion_simple(void);
-int f_plus_check(void);
-int f_string_ansi(void);
-int f_string_single(void);
-int f_string_double(void);
-int f_test_check(void);
-int f_test_single(void);
-int f_test_double(void);
+
+struct state {
+    void (*next)(struct state *);
+    char c;
+};
+
+/* State transition functions */
+void f_normal(struct state *state);
+void f_command_backtick(struct state *state);
+void f_command_expansion_check(struct state *state);
+void f_command_opts(struct state *state);
+void f_command_arg_string(struct state *state);
+void f_command_group(struct state *state);
+void f_command_var(struct state *state);
+void f_command_subshell_list(struct state *state);
+void f_comment(struct state *state);
+void f_control_case(struct state *state);
+void f_control_for(struct state *state);
+void f_control_if(struct state *state);
+void f_control_until(struct state *state);
+void f_declaration(struct state *state);
+void f_declaration_command(struct state *state);
+void f_declaration_function(struct state *state);
+void f_declaration_variable(struct state *state);
+void f_function_body(struct state *state);
+void f_parameter_expansion_simple(struct state *state);
+void f_plus_check(struct state *state);
+void f_string_ansi(struct state *state);
+void f_string_single(struct state *state);
+void f_string_double(struct state *state);
+void f_test_check(struct state *state);
+void f_test_single(struct state *state);
+void f_test_double(struct state *state);
 
 
+/* Enumeration of possible states */
+/*
 enum state_codes { normal,
                    command_backtick,
                    command_expansion_check, 
@@ -55,6 +64,5 @@ enum state_codes { normal,
                    test_single, 
                    test_double
                  };
-
-
+*/
 #endif
