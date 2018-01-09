@@ -43,9 +43,9 @@ void parse_file(char *filename){
     }
 
     struct state state = { f_normal, '\0' };
-    while(state.next){
+    while(state.nextfunc){
         if((state.c = fgetc(fp)) != EOF){;
-            state.next(&state);
+            state.nextfunc(&state);
             printf("char = %c\n", state.c);
         } else {
             break;

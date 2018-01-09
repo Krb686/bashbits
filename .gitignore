@@ -1,3 +1,5 @@
 *.swp
 bin/*
 obj/*
+3_analyzer/bin
+3_analyzer/obj

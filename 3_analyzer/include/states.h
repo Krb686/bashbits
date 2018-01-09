@@ -2,7 +2,7 @@
 #define STATES_H
 
 struct state {
-    void (*next)(struct state *);
+    void (*nextfunc)(struct state *);
     char c;
 };
 
@@ -12,6 +12,7 @@ void f_command_backtick(struct state *state);
 void f_command_expansion_check(struct state *state);
 void f_command_opts(struct state *state);
 void f_command_arg_string(struct state *state);
+void f_command_esc_check(struct state *state);
 void f_command_group(struct state *state);
 void f_command_var(struct state *state);
 void f_command_subshell_list(struct state *state);
@@ -25,6 +26,7 @@ void f_declaration_command(struct state *state);
 void f_declaration_function(struct state *state);
 void f_declaration_variable(struct state *state);
 void f_function_body(struct state *state);
+void f_history_expansion(struct state *state);
 void f_parameter_expansion_simple(struct state *state);
 void f_plus_check(struct state *state);
 void f_string_ansi(struct state *state);
@@ -34,9 +36,11 @@ void f_test_check(struct state *state);
 void f_test_single(struct state *state);
 void f_test_double(struct state *state);
 
+void (*pop_state(int num))(struct state *);
+
 
 /* Enumeration of possible states */
-/*
+
 enum state_codes { normal,
                    command_backtick,
                    command_expansion_check, 
@@ -64,5 +68,4 @@ enum state_codes { normal,
                    test_single, 
                    test_double
                  };
-*/
 #endif
