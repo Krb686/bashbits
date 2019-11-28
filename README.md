@@ -12,8 +12,9 @@ and limitations of returning data via capturing stdout of a particular function 
 
 If that's not enough, then a third good example of this is simply the existence here of a bash static code analyzer written in bash.  It's still a major work in progress as I try to wrap my brain around it and static code analysis in general.
 
-At this point if you're groaning in horror, you're free to go.  But if 
+At this point if you're groaning in horror, you're free to go.  But if you aren't and you're curious or you just love bash, please read on.
 
+---
 
 This repo contains 3 things:
 
@@ -29,5 +30,21 @@ This repo contains 3 things:
 
 Current unit test status (bash 4.2.46)
 
-  Total Passes --> 164  
-  Total Failures --> 0  
+  Total Passes --> 164
+  Total Failures --> 0
+
+---
+
+# 1_lib
+---
+The library of bash functions exists under '1_lib/bash_funcs.sh'.
+
+
+# 2_testsuite
+---
+A testsuite with unit tests for each function in the aforementioned library exists at '2_testsuite/bash_funcs.test.sh'
+
+
+# 3_analyzer
+---
+The bash code analyzer exists at '3_analyzer'.  Currently, there are actually 2 versions present: the original written in bash under the 'old' folder, and an unfinished attempted port to C
