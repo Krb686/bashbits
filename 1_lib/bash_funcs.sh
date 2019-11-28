@@ -10,6 +10,7 @@
 #     - array.contains_value		Check if an array contains a value
 #     - array.delete_by_key		Delete element from array specified by key
 #     - array.delete_by_value		Delete all elements from array specified by value
+#     - array.drop                      Remove the last element from an array (pop w/o returning)
 #     - array.dump_keys			Print out all array keys
 #     - array.dump_values		Print out all array values
 #     - array.get_by_key		Get single array element specified by key
@@ -26,6 +27,7 @@
 #     - array.remove_duplicates		Remove duplicate entries
 #     - array.set_element		Set an element of an array, by specifying key and value
 #     - array.sort                      Sort an array in ascending or descending order, numerically or alphabetically
+#     - array.split
 # bash
 #     - bash.alloc
 #     - bash.free
