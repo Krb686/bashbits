@@ -123,6 +123,14 @@ function array.clear {
 }
 
 # ================ Function: array.compress ================================== #
+# Description:                                                                 #
+#     Compress a standard array (remove interspersed empty string elements)    #
+# Usage:                                                                       #
+#     array.compress <array>                                                   #
+# Return Codes:                                                                #
+#     0 if the array was compressed successfully                               #
+#     1 if the array is not a standard array                                   #
+#     2 if the argument was not an array                                       #
 # ============================================================================ #
 function array.compress {
     local __array="${1:?"No array name provided!"}"
@@ -134,7 +142,6 @@ function array.compress {
     array.get_values "$__array" "$rval"
     array.clear "$__array"
 
-    local ctr=0
     while read -r el; do
         array.push "$__array" "$el"
     done <<< "${!rval}"
@@ -901,18 +908,18 @@ function bash.is_var_ro {
 # Order:                                                                       #
 #     1                                                                        #
 # ============================================================================ #
-if [[ "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -eq 3 && "${BASH_VERSINFO[2]}" -eq 11 ]]; then
+#if [[ "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -eq 3 && "${BASH_VERSINFO[2]}" -eq 11 ]]; then
 function bash.is_var_set {
     local var="${1:?"No var to 'bash.is_var_set'!"}"
     [[ $DBG -eq 1 ]] && declare -p
     declare -p | grep -Poq "declare [a-zA-Z-]+ $var"
 }
-else
-function bash.is_var_set {
-    local var="${1:?"No var to 'bash.is_var_set'!"}"
-    [[ -v "$var" ]] && return 0 || return 1
-}
-fi
+#else
+#function bash.is_var_set {
+#    local var="${1:?"No var to 'bash.is_var_set'!"}"
+#    [[ -v "$var" ]] && return 0 || return 1
+#}
+#fi
 
 # ================ Function: bash.var_contains_attr ========================== #
 # Description:                                                                 #

@@ -108,6 +108,17 @@ function array.clear.test {
     [[ $len -eq 0 ]];         check_pass
 }
 
+function array.compress.test {
+    local i=0
+    local -A assoc_array=()
+    local -a array=('1', '2', '', '3', '', '4')
+
+    array.compress "i"; check_fail 2
+    array.compress "assoc_array"; check_fail 1
+    array.compress "array"; check_pass
+
+}
+
 function array.contains_element.test {
 
     local i=0
@@ -485,7 +496,6 @@ function array.sort.test {
     local test_string="1"$'\n'"2"$'\n'"3"$'\n'"4"$'\n'"6"$'\n'"7"$'\n'"8"
     [[ "$sorted_vals" == "$test_string" ]];   check_pass
 
-    DBG=1
     array.sort "array2" "descend" "num";    check_pass
     sorted_vals="$(array.dump_values "array2")";       check_pass
     test_string="8"$'\n'"7"$'\n'"6"$'\n'"4"$'\n'"3"$'\n'"2"$'\n'"1"
